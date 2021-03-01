@@ -100,15 +100,17 @@ def SendRegisterApplicationMessageToServer(appName, platform, token):
   if wSock.version() != None:
     print(wSock.version())
     wSock.send(command.encode("cp1252"))
+    # SendConnectMessageToRadio(SERIAL,0) # where should this go
     pingThread = threading.Thread(target=PingServer, daemon=True)
     pingThread.start() 
-    
+    wSock.settimeout(500) # hoping this stops software aborting established connection [WinError 10053]
+    wSock.setblocking(1)
+
     """ Communicate with SmartLink Server """
-    
     while True:
       data = wSock.recv(1024).decode("utf-8")
       print(data)
-      if len(data) < 1:
+      if not data or "Disconnecting due to lack of ping" in data:
         break
       elif ("serial=" + SERIAL) in data:
         radioString = data
@@ -118,6 +120,11 @@ def SendRegisterApplicationMessageToServer(appName, platform, token):
     print("Socket connection not established....")
 
   return radioData
+
+
+def SendConnectMessageToRadio(radioSerial, holePunchPort):
+  command = "application connect serial=" + radioSerial + " hole_punch_port=" + str(holePunchPort)
+  wSock.send(command.encode("cp1252"))
 
 
 def ParseRadios(radioList):
@@ -143,7 +150,6 @@ print( "Using browser-based authentication..." )
 """ Create socket instance """
 context = ssl.create_default_context()
 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-# sock.settimeout(100)
 
 """ Establish connection to FLEX's Auth0 server """
 wSock = ssl.wrap_socket(sock)
@@ -153,18 +159,22 @@ token_data = get_auth0_tokens( HOST_Auth, CLIENT_ID, REDIRECT_URI, SCOPE_LIST, B
 
 wSock.connect((HOST_FLEX,443))
 ChosenRadio = SendRegisterApplicationMessageToServer("FlexModule", "Windows_NT", token_data['id_token'])
-print("Radio IP found: " + ChosenRadio['public_ip'])
+try: 
+  print("Radio IP found: " + ChosenRadio['public_ip'])
+  """ Connect directly with FLEX-6400 """
+  radio_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+  radio_sock.connect((ChosenRadio['public_ip'], int(ChosenRadio['public_upnp_tls_port'])))
+  print(radio_sock.getpeername())
+  # pdb.set_trace()
 
-""" Connect directly with FLEX-6400 """
-radio_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-radio_sock.connect((ChosenRadio['public_ip'], int(ChosenRadio['public_upnp_tls_port'])))
+  radio_sock.send("C1|version".encode("cp1252"))
 
-radio_sock.send("C1|version".encode("utf-8"))
+  version_data = radio_sock.recv(2048).decode("cp1252")
+  print("\n")
+  print(version_data)
 
-version_data = radio_sock.recv(2048).decode("utf-8")
-print("\n")
-print(version_data)
-
-radio_sock.close()
+  radio_sock.close()
+except TypeError:
+  print("No Radio IP received")
 
 
