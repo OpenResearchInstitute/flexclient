@@ -94,21 +94,19 @@ def get_auth0_tokens( host, client_id, redirect_uri, scope_list, browser = 'chro
     return
 
 
-def SendRegisterApplicationMessageToServer(appName, platform, token):
+def SendRegisterApplicationMessageToServer(socket, appName, platform, token):
   command = "application register name=" + appName + " platform=" + platform + " token=" + token + '\n'
   radioString = ''
-  if wSock.version() != None:
-    print(wSock.version())
-    wSock.send(command.encode("cp1252"))
-    # SendConnectMessageToRadio(SERIAL,0) # where should this go
-    pingThread = threading.Thread(target=PingServer, daemon=True)
+  if socket.version() != None:
+    print(socket.version())
+    socket.send(command.encode("cp1252"))
+    # SendConnectMessageToRadio(socket, SERIAL,0) # is this needed
+    pingThread = threading.Thread(target=PingServer, args=(socket,), daemon=True)
     pingThread.start() 
-    wSock.settimeout(500) # hoping this stops software aborting established connection [WinError 10053]
-    wSock.setblocking(1)
 
     """ Communicate with SmartLink Server """
     while True:
-      data = wSock.recv(1024).decode("utf-8")
+      data = socket.recv(1024).decode("utf-8")
       print(data)
       if not data or "Disconnecting due to lack of ping" in data:
         break
@@ -119,12 +117,14 @@ def SendRegisterApplicationMessageToServer(appName, platform, token):
   else: 
     print("Socket connection not established....")
 
+  socket.close()
+  pingThread.join() # End thread manually
   return radioData
 
 
-def SendConnectMessageToRadio(radioSerial, holePunchPort):
+def SendConnectMessageToRadio(socket, radioSerial, holePunchPort):
   command = "application connect serial=" + radioSerial + " hole_punch_port=" + str(holePunchPort)
-  wSock.send(command.encode("cp1252"))
+  socket.send(command.encode("cp1252"))
 
 
 def ParseRadios(radioList):
@@ -138,10 +138,23 @@ def ParseRadios(radioList):
   return desirable_txt
 
 
-def PingServer():
+def PingServer(socket):
+  """ Is Connection aborting here?? """
+  s = True
+  while s:
+    try:
+      socket.send("ping from client".encode("cp1252"))
+      sleep(5)
+    except: # Socket is closed
+      print('breaking')
+      s = False
+  print('broken')
+
+
+def ReceiveData(socket):
   while True:
-    wSock.send("ping from client".encode())
-    sleep(5)
+    data = socket.recv(512).decode("cp1252")
+    print(data)
 
 
 ##############
@@ -149,31 +162,43 @@ print( "Using browser-based authentication..." )
 
 """ Create socket instance """
 context = ssl.create_default_context()
-sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+server_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
 """ Establish connection to FLEX's Auth0 server """
-wSock = ssl.wrap_socket(sock)
+wserver_sock = ssl.wrap_socket(server_sock)
 
 token_data = get_auth0_tokens( HOST_Auth, CLIENT_ID, REDIRECT_URI, SCOPE_LIST, BROWSER )
 # print( "Received id_token =", token_data[ "id_token" ] )
 
-wSock.connect((HOST_FLEX,443))
-ChosenRadio = SendRegisterApplicationMessageToServer("FlexModule", "Windows_NT", token_data['id_token'])
+wserver_sock.connect((HOST_FLEX,443))
+ChosenRadio = SendRegisterApplicationMessageToServer(wserver_sock, "FlexModule", "Windows_NT", token_data['id_token'])
 try: 
   print("Radio IP found: " + ChosenRadio['public_ip'])
   """ Connect directly with FLEX-6400 """
+  context.check_hostname = False
+  context.verify_mode = ssl.CERT_NONE
   radio_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-  radio_sock.connect((ChosenRadio['public_ip'], int(ChosenRadio['public_upnp_tls_port'])))
-  print(radio_sock.getpeername())
+  wradio_sock = ssl.wrap_socket(radio_sock) 
+  wradio_sock.connect((ChosenRadio['public_ip'], int(ChosenRadio['public_upnp_tls_port'])))
+  print(wradio_sock.getpeername())
   # pdb.set_trace()
 
-  radio_sock.send("C1|version".encode("cp1252"))
+  print('\n\nCommunication with FLEX:')
+  # readThread = threading.Thread(target=ReceiveData, args=(wradio_sock,), daemon=True)
+  # readThread.start() 
+  while True:
+  # for i in range(20):
+    conn_data = wradio_sock.recv(512).decode("cp1252")
+    print(conn_data)
+    if not conn_data or "Disconnecting due to lack of ping" in conn_data:
+      break
+    """ Program always hangs HERE """
 
-  version_data = radio_sock.recv(2048).decode("cp1252")
-  print("\n")
+  wradio_sock.send("C1|version".encode("cp1252"))
+  version_data = wradio_sock.recv(512).decode("cp1252")
   print(version_data)
 
-  radio_sock.close()
+  wradio_sock.close()
 except TypeError:
   print("No Radio IP received")
 
