@@ -1,4 +1,4 @@
-import http.client, pdb, socket, ssl, threading
+import http.client, pdb, socket, ssl, threading, select
 from selenium import webdriver  # Needed to instantiate a browser whose current URL may be set and read
 from time import sleep          # Needed to prevent busy-waiting for the browser to complete the login process!
 from json import loads          # Only needed if using .loads() instead of manually parsing the final server response
@@ -29,7 +29,11 @@ def get_response( conn ):
 #  The output is None for an unsuccessful login, or the response dictionary for a successful one.
 #  The token required by smartlink.flexradio.com is stored under the key "id_token".
 def get_auth0_tokens( host, client_id, redirect_uri, scope_list, browser = 'chrome' ):
-  browsers = { 'firefox' : webdriver.Firefox, 'chrome' : webdriver.Chrome }
+  """ to hide non-harmful error """
+  options = webdriver.ChromeOptions()
+  options.add_experimental_option('excludeSwitches', ['enable-logging'])
+  """ """
+  browsers = { 'firefox' : webdriver.Firefox, 'chrome' : webdriver.Chrome(options=options, executable_path=r"C:\Program Files\chromedriver_win32\chromedriver.exe") }
   scope = "%20".join( scope_list )
   state_len = 16
   state = "".join( choices( ascii_letters + digits, k = state_len ) )       # was "ypfolheqwpezrxdb" when testing
@@ -50,7 +54,7 @@ def get_auth0_tokens( host, client_id, redirect_uri, scope_list, browser = 'chro
   rstr = "Found. Redirecting to "
   if response.find( rstr ) != -1:
     url2 = response.split( rstr )[ 1 ]
-    driver = browsers[ browser ](executable_path=r"C:\Program Files\chromedriver_win32\chromedriver.exe")
+    driver = browsers[ browser ]
     url2 = "https://" + host + url2
     driver.get( url2 )
   else:
@@ -100,25 +104,36 @@ def SendRegisterApplicationMessageToServer(socket, appName, platform, token):
   if socket.version() != None:
     print(socket.version())
     socket.send(command.encode("cp1252"))
-    # SendConnectMessageToRadio(socket, SERIAL,0) # is this needed
-    pingThread = threading.Thread(target=PingServer, args=(socket,), daemon=True)
-    pingThread.start() 
+    pingThread = PingServer(socket)
+    pingThread.start()
 
     """ Communicate with SmartLink Server """
-    while True:
-      data = socket.recv(1024).decode("utf-8")
-      print(data)
-      if not data or "Disconnecting due to lack of ping" in data:
-        break
-      elif ("serial=" + SERIAL) in data:
-        radioString = data
+    inputs = [socket]
+    while inputs:
+      readable, writable, exceptional = select.select(inputs, [], [], 2)
+      # pdb.set_trace()
+
+      for s in readable:
+        data = s.recv(1024).decode("utf-8")
+        print(data)
+        if data:
+          if ("serial=" + SERIAL) in data:
+            radioString = data
+        else:
+          """ Never gets here as no longer any sockets in readable """
+          inputs.remove(s)
+      if len(readable) < 1:
+        """ no sockets are readable so must escape loop """
+        inputs.clear()
+          
+    pingThread.running = False
+    pingThread.join() # End thread manually
+    socket.close()
 
     radioData = ParseRadios(radioString)
   else: 
     print("Socket connection not established....")
 
-  socket.close()
-  pingThread.join() # End thread manually
   return radioData
 
 
@@ -138,23 +153,66 @@ def ParseRadios(radioList):
   return desirable_txt
 
 
-def PingServer(socket):
-  """ Is Connection aborting here?? """
-  s = True
-  while s:
-    try:
-      socket.send("ping from client".encode("cp1252"))
+class PingServer(threading.Thread):
+  def __init__(self, socket):
+    threading.Thread.__init__(self, daemon=True)
+    self.socket = socket
+    self.running = True
+
+  def run(self):
+    print("\n...Thread started...\n")
+    while self.running:
+      self.socket.send("ping from client\n".encode("cp1252"))
       sleep(5)
-    except: # Socket is closed
-      print('breaking')
-      s = False
-  print('broken')
+    print("\n...Thread ended...\n")
 
 
-def ReceiveData(socket):
-  while True:
-    data = socket.recv(512).decode("cp1252")
-    print(data)
+class ReceiveData(threading.Thread):
+  def __init__(self, socket):
+    threading.Thread.__init__(self, daemon=True)
+    self.socket = socket
+
+  def run(self):
+    read_socks = [self.socket]
+    while read_socks:
+      readable, w, e = select.select(read_socks,[],[],0)
+      for s in readable:
+        data = s.recv(512).decode("cp1252")
+        if data:
+          # add data to buffer?
+          print(data)
+        else:
+          read_socks.remove(s)
+
+
+def ConfigureAndDiscover():
+  """ Create socket instance for SmartLink """
+  context = ssl.create_default_context()
+  server_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+  wrapped_server_sock = ssl.wrap_socket(server_sock)
+
+  """ Create socket instance for FLEX radio """
+  context.check_hostname = False
+  context.verify_mode = ssl.CERT_NONE
+  radio_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+  wrapped_radio_sock = ssl.wrap_socket(radio_sock)
+
+  """ Establish connection to FLEX's Auth0 server """
+  token_data = get_auth0_tokens( HOST_Auth, CLIENT_ID, REDIRECT_URI, SCOPE_LIST, BROWSER )
+  wrapped_server_sock.connect((HOST_FLEX,443))
+  ChosenRadio = SendRegisterApplicationMessageToServer(wrapped_server_sock, "FlexModule", "Windows_NT", token_data['id_token'])
+  server_sock.close()
+
+  """ Connect directly with FLEX-6400 """
+  try: 
+    print("Radio IP found: " + ChosenRadio['public_ip'])
+    wrapped_radio_sock.connect((ChosenRadio['public_ip'], int(ChosenRadio['public_upnp_tls_port'])))
+    print(wrapped_radio_sock.getpeername())
+  except TypeError:
+    print("No Radio IP Received")
+
+  return wrapped_radio_sock
+
 
 
 ##############
@@ -172,8 +230,11 @@ token_data = get_auth0_tokens( HOST_Auth, CLIENT_ID, REDIRECT_URI, SCOPE_LIST, B
 
 wserver_sock.connect((HOST_FLEX,443))
 ChosenRadio = SendRegisterApplicationMessageToServer(wserver_sock, "FlexModule", "Windows_NT", token_data['id_token'])
+server_sock.close()
 try: 
   print("Radio IP found: " + ChosenRadio['public_ip'])
+  pdb.set_trace()
+
   """ Connect directly with FLEX-6400 """
   context.check_hostname = False
   context.verify_mode = ssl.CERT_NONE
@@ -184,21 +245,21 @@ try:
   # pdb.set_trace()
 
   print('\n\nCommunication with FLEX:')
-  # readThread = threading.Thread(target=ReceiveData, args=(wradio_sock,), daemon=True)
-  # readThread.start() 
+  # receiveThread = ReceiveData(wradio_sock)
   while True:
   # for i in range(20):
     conn_data = wradio_sock.recv(512).decode("cp1252")
     print(conn_data)
     if not conn_data or "Disconnecting due to lack of ping" in conn_data:
       break
-    """ Program always hangs HERE """
+    """ Program hangs HERE """
 
   wradio_sock.send("C1|version".encode("cp1252"))
   version_data = wradio_sock.recv(512).decode("cp1252")
   print(version_data)
 
   wradio_sock.close()
+  radio_sock.close()
 except TypeError:
   print("No Radio IP received")
 
