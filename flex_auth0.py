@@ -142,12 +142,12 @@ def SendRegisterApplicationMessageToServer(socket, appName, platform, token):
 
 def SendConnectMessageToRadio(socket, radioSerial, holePunchPort):
   command = "application connect serial=" + radioSerial + " hole_punch_port=" + str(holePunchPort) + "\n"
-  # print("\nSending connect message: " + command + "\n")
+  # print("\nSending connect message: " + command)
   socket.send(command.encode("cp1252"))
-  handle_data = socket.recv(64).decode("cp1252")
+  handle_data = socket.recv(128).decode("cp1252")
   print(handle_data)
   try:
-    handle = handle_data.split('handle=')[1]
+    handle = handle_data.split('handle=')[1].strip()
     return handle
   except IndexError:
     print("Server Handle not received")
@@ -193,8 +193,8 @@ class ReceiveData(threading.Thread):
       for s in readable:
         data = s.recv(512).decode("cp1252")
         if data:
-          # ParseRead(data)
-          print(data)
+          ParseRead(data)
+          # print(data)
         else:
           read_socks.remove(s)
 
@@ -234,6 +234,8 @@ def WanValidate(socket, handle):
 
 
 def ParseRead(string):
+  print(string)
+
   read_type = string[0]
   if read_type == 'R':
     ParseReply(string)
@@ -241,13 +243,12 @@ def ParseRead(string):
     ParseStatus(string)
   elif read_type == 'M':
     ParseMessage(string)
+  elif read_type == 'H':
+    ParseHandle(string)
+  elif read_type == 'V':
+    ParseVersion(string)
   else:
     print('Unknown response from radio') 
-  """ Not required as handled in initialisation? """
-  # elif read_type == 'H':
-  #   ParseHandle(string)
-  # elif read_type == 'V':
-  #   ParseVersion(string)
 
 
 def ParseReply(string):
@@ -271,28 +272,51 @@ def ParseStatus(string):
     # Add msg to statuses_buffer[]
 
 
+def ParseMessage(string):
+  try:
+    (MessageNum, msg) = string.split('|')
+  except ValueError:
+    print("Error - Invalid message")
+    return
+
+  # add msg to log
+
+
+def ParseHandle(string):
+  global CLIENT_HANDLE
+  if len(string) >= 8:
+    CLIENT_HANDLE = string[1:9]
+  else:
+    print("Error - Invalid handle returned")
+
+
+def ParseVersion(string):
+  global CLIENT_HANDLE
+  CLIENT_HANDLE = string.split('H')[1].strip()
+  print("New Client Handle: " + CLIENT_HANDLE)
 
 
 def main():
   print("Using browser-based authentication...\n")
   FLEX_Sock, ServerHandle = ConfigureAndDiscover()
   if FLEX_Sock:
-    print('\n\nCommunication with FLEX:')
     WanValidate(FLEX_Sock, ServerHandle)
+    print('\n\nCommunication with FLEX:')
     receiveThread = ReceiveData(FLEX_Sock)
     receiveThread.start()
 
 
-    sleep(5)
+    sleep(1)
 
-    """ Returning R1|500000B1 - i.e connection not accepted by radio """
     print("sending version command")
     FLEX_Sock.send("C1|version\n".encode("cp1252"))
     sleep(5)
     
-    # print("sending antenna_list request")
-    # FLEX_Sock.send("C16|ant list\n".encode("cp1252"))
-    # sleep(5)
+    # pdb.set_trace()
+
+    print("sending antenna_list request")
+    FLEX_Sock.send("C16|ant list\n".encode("cp1252"))
+    sleep(5)
 
     """
     while True:
