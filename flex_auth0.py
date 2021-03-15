@@ -11,7 +11,8 @@ REDIRECT_URI = "https://" + HOST_Auth + "/mobile"
 CLIENT_ID = "4Y9fEIIsVYyQo5u6jr7yBWc4lV5ugC2m"      # was "C1br1uk8UecHZnUGlIFt1yp62ZNizey3"
 SCOPE_LIST = [ 'openid', 'profile' ]
 BROWSER = 'chrome'
-SERIAL = '1019-9534-6400-6018'
+SERIAL = '1019-9534-6400-6018'  # should be set through user input at startup
+CLIENT_HANDLE = '' # changes every session, set during initialisation
 
 
 ###
@@ -125,21 +126,32 @@ def SendRegisterApplicationMessageToServer(socket, appName, platform, token):
       if len(readable) < 1:
         """ no sockets are readable so must escape loop """
         inputs.clear()
-          
+    
+    radioData = ParseRadios(radioString)
+    serverHandle = SendConnectMessageToRadio(socket, SERIAL, radioData['public_upnp_tls_port'])  
+
     pingThread.running = False
     pingThread.join() # End thread manually
     socket.close()
 
-    radioData = ParseRadios(radioString)
   else: 
     print("Socket connection not established....")
 
-  return radioData
+  return radioData, serverHandle
 
 
 def SendConnectMessageToRadio(socket, radioSerial, holePunchPort):
-  command = "application connect serial=" + radioSerial + " hole_punch_port=" + str(holePunchPort)
+  command = "application connect serial=" + radioSerial + " hole_punch_port=" + str(holePunchPort) + "\n"
+  # print("\nSending connect message: " + command + "\n")
   socket.send(command.encode("cp1252"))
+  handle_data = socket.recv(64).decode("cp1252")
+  print(handle_data)
+  try:
+    handle = handle_data.split('handle=')[1]
+    return handle
+  except IndexError:
+    print("Server Handle not received")
+    return ""
 
 
 def ParseRadios(radioList):
@@ -181,7 +193,7 @@ class ReceiveData(threading.Thread):
       for s in readable:
         data = s.recv(512).decode("cp1252")
         if data:
-          # add data to buffer?
+          # ParseRead(data)
           print(data)
         else:
           read_socks.remove(s)
@@ -202,7 +214,7 @@ def ConfigureAndDiscover():
   """ Establish connection to FLEX's Auth0 server """
   token_data = get_auth0_tokens( HOST_Auth, CLIENT_ID, REDIRECT_URI, SCOPE_LIST, BROWSER )
   wrapped_server_sock.connect((HOST_FLEX,443))
-  ChosenRadio = SendRegisterApplicationMessageToServer(wrapped_server_sock, "FlexModule", "Windows_NT", token_data['id_token'])
+  ChosenRadio, Handle = SendRegisterApplicationMessageToServer(wrapped_server_sock, "FlexModule", "Windows_NT", token_data['id_token'])
   server_sock.close()
 
   """ Connect directly with FLEX-6400 """
@@ -210,28 +222,86 @@ def ConfigureAndDiscover():
     print("Radio IP found: " + ChosenRadio['public_ip'])
     wrapped_radio_sock.connect((ChosenRadio['public_ip'], int(ChosenRadio['public_upnp_tls_port'])))
     print(wrapped_radio_sock.getpeername())
-    return wrapped_radio_sock
+    return wrapped_radio_sock, Handle
   except TypeError:
     print("No Radio IP Received")
+
+
+def WanValidate(socket, handle):
+  command = "C1|wan validate handle=" + handle + "\n"
+  print("\nSending Wan Validate command: " + command + "\n")
+  socket.send(command.encode("cp1252"))
+
+
+def ParseRead(string):
+  read_type = string[0]
+  if read_type == 'R':
+    ParseReply(string)
+  elif read_type == 'S':
+    ParseStatus(string)
+  elif read_type == 'M':
+    ParseMessage(string)
+  else:
+    print('Unknown response from radio') 
+  """ Not required as handled in initialisation? """
+  # elif read_type == 'H':
+  #   ParseHandle(string)
+  # elif read_type == 'V':
+  #   ParseVersion(string)
+
+
+def ParseReply(string):
+  try:
+    (response_code, hex_code, msg) = string.split('|')
+  except ValueError:
+    print("Error - Incomplete reply")
+    return
+
+  # if int(hex_code) == 0:  # msg reponse is "OK"
+    # Add {reponse_code: msg} to replies_buffer[]
+
+
+def ParseStatus(string):
+  try:
+    (radio_handle, msg) = string.split('|')
+  except ValueError:
+    print("Error - Invalid status message")
+
+  # if radio_handle == s + CLIENT_HANDLE:  # status message for this client i.e you
+    # Add msg to statuses_buffer[]
 
 
 
 
 def main():
   print("Using browser-based authentication...\n")
-  FLEX_Sock = ConfigureAndDiscover()
+  FLEX_Sock, ServerHandle = ConfigureAndDiscover()
   if FLEX_Sock:
     print('\n\nCommunication with FLEX:')
+    WanValidate(FLEX_Sock, ServerHandle)
     receiveThread = ReceiveData(FLEX_Sock)
     receiveThread.start()
 
+
     sleep(5)
 
+    """ Returning R1|500000B1 - i.e connection not accepted by radio """
     print("sending version command")
     FLEX_Sock.send("C1|version\n".encode("cp1252"))
-    
     sleep(5)
+    
+    # print("sending antenna_list request")
+    # FLEX_Sock.send("C16|ant list\n".encode("cp1252"))
+    # sleep(5)
 
+    """
+    while True:
+      read replies from replies_buffer
+      update statuses from statuses_buffer
+      # requires another input thread
+      if input == exit:
+        break
+    """
     FLEX_Sock.close()
   else:
     print("Connection to Radio Failed")
