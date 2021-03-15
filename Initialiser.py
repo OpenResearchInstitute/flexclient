@@ -29,7 +29,7 @@ class PingServer(threading.Thread):
 		print("\n...Thread ended...\n")
 
 
-
+""" Should be removed once global ReceiveData thread can be accessed """
 class ReceiveData(threading.Thread):
 	""" Thread to contiually receive tcp data in BG """
 	def __init__(self, socket):
@@ -52,8 +52,9 @@ class ReceiveData(threading.Thread):
 
 class Initialise(object):
 	FLEX_Sock = None
+	Handle = None
 	def __init__(self, serial_no):
-		self.FLEX_Sock = self.ConfigureAndDiscover(serial_no)
+		self.FLEX_Sock, self.Handle = self.ConfigureAndDiscover(serial_no)
 
 
 	def get_response(self, conn ):
@@ -168,22 +169,44 @@ class Initialise(object):
 					if data:
 						if ("serial=" + serial_no) in data:
 							radioString = data
-						else:
-							""" Never gets here as no longer any sockets in readable """
-							inputs.remove(s)
+					else:
+						""" Never gets here as no longer any sockets in readable """
+						inputs.remove(s)
 				if len(readable) < 1:
 					""" no sockets are readable so must escape loop """
 					inputs.clear()
+
+			radioData = self.ParseRadios(radioString)
+			serverHandle = self.SendConnectMessageToRadio(socket, radioData['serial'], radioData['public_upnp_tls_port']) 
 
 			pingThread.running = False
 			pingThread.join() # End thread manually
 			socket.close()
 
-			radioData = self.ParseRadios(radioString)
 		else: 
 			print("Socket connection not established....")
 
-		return radioData
+		return radioData, serverHandle
+
+
+	def SendConnectMessageToRadio(self, socket, radioSerial, holePunchPort):
+		command = "application connect serial=" + radioSerial + " hole_punch_port=" + str(holePunchPort) + "\n"
+		print("\nSending connect message: " + command)
+		socket.send(command.encode("cp1252"))
+		handle_data = socket.recv(128).decode("cp1252")
+		print(handle_data)
+		try:
+			handle = handle_data.split('handle=')[1].strip()
+			return handle
+		except IndexError:
+			print("Server Handle not received")
+			return ""
+
+
+	def WanValidate(self, socket, handle):
+		command = "C1|wan validate handle=" + handle + "\n"
+		print("\nSending Wan Validate command: " + command + "\n")
+		socket.send(command.encode("cp1252"))
 
 
 	def ConfigureAndDiscover(self, serial_no):
@@ -201,7 +224,7 @@ class Initialise(object):
 		""" Establish connection to FLEX's Auth0 server """
 		token_data = self.get_auth0_tokens( HOST_Auth, CLIENT_ID, REDIRECT_URI, SCOPE_LIST, BROWSER )
 		wrapped_server_sock.connect((HOST_FLEX,443))
-		ChosenRadio = self.SendRegisterApplicationMessageToServer(wrapped_server_sock, serial_no, "FlexModule", "Windows_NT", token_data['id_token'])
+		ChosenRadio, Handle = self.SendRegisterApplicationMessageToServer(wrapped_server_sock, serial_no, "FlexModule", "Windows_NT", token_data['id_token'])
 		server_sock.close()
 
 		""" Connect directly with FLEX-6400 """
@@ -209,21 +232,23 @@ class Initialise(object):
 			print("Radio IP found: " + ChosenRadio['public_ip'])
 			wrapped_radio_sock.connect((ChosenRadio['public_ip'], int(ChosenRadio['public_upnp_tls_port'])))
 			print(wrapped_radio_sock.getpeername())
-			return wrapped_radio_sock
+			return wrapped_radio_sock, Handle
 		except TypeError:
 			print("No Radio IP Received")
 
 
+""" Should be removed once proper main() can be accessed """
 def main():
-  # SERIAL = input("\nEnter your radio's Serial Number:")
+	# SERIAL = input("\nEnter your radio's Serial Number:")
 
 	print("Using browser-based authentication...\n")
 	myRadio = Initialise(SERIAL)
 	FLEX = myRadio.FLEX_Sock
+	SERVER_HANDLE = myRadio.Handle
 
 	if FLEX:
+		myRadio.WanValidate(FLEX, SERVER_HANDLE)
 		print('\n\nCommunication with FLEX:')
-		# WanValidate(FLEX, ServerHandle)
 		receiveThread = ReceiveData(FLEX)
 		receiveThread.start()
 
@@ -234,9 +259,9 @@ def main():
 		FLEX.send("C1|version\n".encode("cp1252"))
 		sleep(5)
 
-		# print("sending antenna_list request")
-		# FLEX_Sock.send("C16|ant list\n".encode("cp1252"))
-		# sleep(5)
+		print("sending antenna_list request")
+		FLEX.send("C16|ant list\n".encode("cp1252"))
+		sleep(5)
 
 		"""
 		while True:
