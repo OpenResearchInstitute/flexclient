@@ -1,6 +1,6 @@
 import http.client, pdb, socket, ssl, threading, select
 from time import sleep          # Needed to prevent busy-waiting for the browser to complete the login process!
-from pkg.Initialiser import Initialise
+from pkg.Initialiser import ConnectRadio
 import pkg.DataHandler
 
 SERIAL = '1019-9534-6400-6018'  # should be set through user input at startup
@@ -18,40 +18,37 @@ class ReceiveData(threading.Thread):
 			readable, w, e = select.select(read_socks,[],[],0)
 			for s in readable:
 				data = s.recv(512).decode("cp1252")
+				"""
+				Must include a check for \n end of message signifier
+				"""
 				if data:
 					pkg.DataHandler.ParseRead(data)
 					# print(data)
 				else:
 					read_socks.remove(s)
 
-def SendCommand(socket, command):
-	string = (command + "\n").encode("cp1252")
-	socket.send(string)
-
 
 def main():
 	# SERIAL = input("\nEnter your radio's Serial Number:")
 
 	print("Using browser-based authentication...\n")
-	myRadio = Initialise(SERIAL)
-	FLEX = myRadio.FLEX_Sock
-	SERVER_HANDLE = myRadio.Handle
+	myRadio = ConnectRadio(SERIAL)
 
-	if FLEX:
-		myRadio.WanValidate(FLEX, SERVER_HANDLE)
+	if myRadio.FLEX_Sock:
+		myRadio.WanValidate(myRadio.FLEX_Sock, myRadio.Handle)
 		print('\n\nCommunication with FLEX:')
-		receiveThread = ReceiveData(FLEX)
+		receiveThread = ReceiveData(myRadio.FLEX_Sock)
 		receiveThread.start()
 
 
 		sleep(2)
 
 		print("sending version command")
-		FLEX.send("C1|version\n".encode("cp1252"))
+		myRadio.FLEX_Sock.send("C1|version\n".encode("cp1252"))
 		sleep(2)
 
 		print("sending antenna_list request")
-		FLEX.send("C16|ant list\n".encode("cp1252"))
+		myRadio.SendCommand("C16|ant list")
 		sleep(2)
 
 		
@@ -63,12 +60,12 @@ def main():
 			if cmd == "exit":
 				break
 			else:
-				SendCommand(FLEX, cmd)
+				SendCommand(myRadio.FLEX_Sock, cmd)
 			sleep(2)
 		
-		SendCommand(FLEX, "client disconnect " + SERVER_HANDLE)
+		myRadio.SendCommand(myRadio.FLEX_Sock, "client disconnect " + myRadio.Handle)
 		sleep(2)
-		FLEX.close()
+		myRadio.FLEX_Sock.close()
 	else:
 		print("Connection to Radio Failed")
 
