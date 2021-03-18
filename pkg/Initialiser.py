@@ -29,32 +29,17 @@ class PingServer(threading.Thread):
 		print("\n...Thread ended...\n")
 
 
-""" Should be removed once global ReceiveData thread can be accessed """
-# class ReceiveData(threading.Thread):
-# 	""" Thread to contiually receive tcp data in BG """
-# 	def __init__(self, socket):
-# 		threading.Thread.__init__(self, daemon=True)
-# 		self.socket = socket
 
-# 	def run(self):
-# 		read_socks = [self.socket]
-# 		while read_socks:
-# 			readable, w, e = select.select(read_socks,[],[],0)
-# 			for s in readable:
-# 				data = s.recv(512).decode("cp1252")
-# 				if data:
-# 					# ParseRead(data)
-# 					print(data)
-# 				else:
-# 					read_socks.remove(s)
-
-
-
-class Initialise(object):
+class ConnectRadio(object):
 	FLEX_Sock = None
 	Handle = None
 	def __init__(self, serial_no):
 		self.FLEX_Sock, self.Handle = self.ConfigureAndDiscover(serial_no)
+
+
+	def SendCommand(self, command):
+		string = (command + "\n").encode("cp1252")
+		self.FLEX_Sock.send(string)
 
 
 	def get_response(self, conn ):
@@ -190,7 +175,11 @@ class Initialise(object):
 
 
 	def SendConnectMessageToRadio(self, socket, radioSerial, holePunchPort):
-		command = "application connect serial=" + radioSerial + " hole_punch_port=" + str(holePunchPort) + "\n"
+		try:
+			command = "application connect serial=" + radioSerial + " hole_punch_port=" + str(holePunchPort) + "\n"
+		except TypeError:
+			print("Radio Serial not returned - is radio On?")
+			return
 		print("\nSending connect message: " + command)
 		socket.send(command.encode("cp1252"))
 		handle_data = socket.recv(128).decode("cp1252")
@@ -237,44 +226,3 @@ class Initialise(object):
 			print("No Radio IP Received")
 
 
-""" Should be removed once proper main() can be accessed """
-def main():
-	# SERIAL = input("\nEnter your radio's Serial Number:")
-
-	print("Using browser-based authentication...\n")
-	myRadio = Initialise(SERIAL)
-	FLEX = myRadio.FLEX_Sock
-	SERVER_HANDLE = myRadio.Handle
-
-	if FLEX:
-		myRadio.WanValidate(FLEX, SERVER_HANDLE)
-		print('\n\nCommunication with FLEX:')
-		receiveThread = ReceiveData(FLEX)
-		receiveThread.start()
-
-
-		sleep(5)
-
-		print("sending version command")
-		FLEX.send("C1|version\n".encode("cp1252"))
-		sleep(5)
-
-		print("sending antenna_list request")
-		FLEX.send("C16|ant list\n".encode("cp1252"))
-		sleep(5)
-
-		"""
-		while True:
-			read replies from replies_buffer
-			update statuses from statuses_buffer
-			# requires another input thread
-			if input == exit:
-			break
-		"""
-		FLEX.close()
-	else:
-		print("Connection to Radio Failed")
-
-
-# if __name__ == "__main__":
-# 	main()
