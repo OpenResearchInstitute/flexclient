@@ -1,22 +1,26 @@
 import http.client, pdb, socket, ssl, threading, select
+from pkg.Slice import Slice
 
 
 class Radio(object):
 	""" Class to create connection with FLEX radio and establish communication channel """
 	def __init__(self, radioData, smartlink):
-		self.smartlink_sock = smartlink.wrapped_server_sock
-		self.radioData = radioData
+		self.smartlink_sock = smartlink.wrapped_server_sock	# socket to comms with Smartlink
+		self.radioData = radioData	# info for the radio about itself
 		context = ssl.create_default_context()
 		context.check_hostname = False
 		context.verify_mode = ssl.CERT_NONE
 		self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-		self.FLEX_Sock = ssl.wrap_socket(self.sock)
+		self.FLEX_Sock = ssl.wrap_socket(self.sock)	# socket to comms with the FLEX radio
 
 		self.serverHandle = self.SendConnectMessageToRadio()
-		self.FLEX_Sock.connect((self.radioData['public_ip'], int(self.radioData['public_upnp_tls_port'])))
-		print(self.FLEX_Sock.getpeername())
 		if self.serverHandle:
+			self.FLEX_Sock.connect((self.radioData['public_ip'], int(self.radioData['public_upnp_tls_port'])))
+			print(self.FLEX_Sock.getpeername())
 			self.WanValidate()
+
+		self.antList = []
+		self.sliceList = []
 
 
 	def SendConnectMessageToRadio(self):
@@ -47,6 +51,23 @@ class Radio(object):
 		print(string)
 		command = (string + "\n").encode("cp1252")
 		self.FLEX_Sock.send(command)
+
+
+
+	def AddSlice(self, freq, ant, mode):
+		# if ant in self.antList:
+		self.sliceList.append(Slice(self, freq, ant, mode))
+		# else:
+		# 	raise Exception("Chosen Antenna not available")
+		
+		# add reply expected to reply list = R21|0|0
+
+	def GetSlice(self, s_id):
+		""" We want the slice with corresponding id (as this is what FLEX recognises) """
+		return [s for s in self.sliceList if s.slice_id == s_id][0]
+
+	def RemoveSlice(self, slice_id):
+		GetSlice(slice_id).Remove()
 
 
 	def CloseRadio(self):
