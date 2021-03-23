@@ -1,6 +1,33 @@
 import http.client, pdb, socket, ssl, threading, select
 
 
+class ReceiveData(threading.Thread):
+	""" Thread to contiually receive tcp data in BG """
+	def __init__(self, socket):
+		threading.Thread.__init__(self, daemon=True)
+		self.socket = socket
+		self.running = True
+
+	def run(self):
+		read_socks = [self.socket]
+		response = ""
+		while read_socks:
+			readable, w, e = select.select(read_socks,[],[],0)
+			for s in readable:
+				data = s.recv(512).decode("cp1252")
+				response += data
+				if data.endswith("\n"):
+					ParseRead(response)
+					response = ""
+
+				# if not data:
+				# 	read_socks.remove(s)
+			if not self.running:
+				read_socks.clear()
+
+
+
+
 def ParseRead(string):
 	print(string)
 	read_type = string[0]
