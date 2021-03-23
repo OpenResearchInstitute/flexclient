@@ -1,11 +1,19 @@
+import itertools
+
+
 """
 Need to find a way to reference radio outside the Main() context
 Also myRadio needs to have attributes and methods, but shouldn't be defined in Initialiser.py
 """
 
 class Slice(object):
+	""" A Class to create, remove and alter radio frequency slices """
+	Id_iter = itertools.count() # slice_id needs to be a unique attribute for each slice 
 
-	def __init__(self, freq, ant, mode, streamID=None, source_slice=None):
+	def __init__(self, radio, freq, ant, mode, streamID=None, source_slice=None):
+		self.slice_id = next(self.Id_iter)
+		self.radio = radio
+
 		if freq < 0.03:
 			self.freq = 0.03
 			# log attempt to set below min
@@ -15,11 +23,7 @@ class Slice(object):
 		else:
 			self.freq = freq
 
-		ant_list = myRadio.GetAnts() #GetAnts(Rx/Tx)?
-		if ant in ant_list:
-			self.ant = ant
-		else:
-			raise Exception("Chosen Antenna not available")
+		self.ant = ant
 		
 		self.mode = mode
 
@@ -28,23 +32,22 @@ class Slice(object):
 		if streamID is not None:
 			self.streamID = streamID
 			command += (" pan=0x" + str(self.streamID))
-		command += (" ant=" + ant)
-		command += (" mode=" + mode)
+		command += (" ant=" + self.ant)
+		command += (" mode=" + self.mode)
 		if source_slice is not None:
 			command += (" clone_slice=" + str(source_slice))
 		
-		myRadio.SendCommand(command)
-		# myRadio.AddSlice(self)
+		self.radio.SendCommand(command)
 		# add reply expected to reply list = R21|0|0
 
 
-	def Remove(self, slice_rx):
-		command = "C19|slice r " + str(slice_rx)
-		myRadio.SendCommand(command)
-		# myRadio.RemoveSlice(self)
+	def Remove(self):
+		command = "C19|slice r " + str(self.slice_id)
+		self.radio.SendCommand(command)
+		# add reply expected to reply list R|19|0|
 
 
-	def Tune(self, slice_rx, freq):
+	def Tune(self, freq):
 		if freq < 0.03:
 			self.freq = 0.03
 			# log attempt to set below min
@@ -54,17 +57,17 @@ class Slice(object):
 		else:
 			self.freq = freq
 
-		command = "C12|slice t " + str(slice_rx) + str(self.freq)
-		myRadio.SendCommand(command)
+		command = "C12|slice t " + str(self.slice_id) + " " + str(self.freq)
+		self.radio.SendCommand(command)
 		#add reply expected to reply list = R12|0||
 
 
-	def Set(self, slice_rx, **kwargs):
-		command = "C41|slice s " + str(slice_rx)
-		for param, arg in self.kwargs.items():
+	def Set(self, **kwargs):
+		command = "C41|slice s " + str(self.slice_id)
+		for param, arg in kwargs.items():
 			command += (" " + param + "=" + str(arg))
 
-		myRadio.SendCommand(command)
+		self.radio.SendCommand(command)
 		#add reply expected to reply list = R41|0|...
 
 
