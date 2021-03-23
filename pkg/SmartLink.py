@@ -35,8 +35,8 @@ class SmartLink(object):
 		self.wrapped_server_sock = ssl.wrap_socket(self.server_sock)
 		self.wrapped_server_sock.connect((self.HOST_FLEX, 443))
 
-		pingThread = PingServer(self.wrapped_server_sock)
-		pingThread.start()
+		self.pingThread = PingServer(self.wrapped_server_sock)
+		self.pingThread.start()
 
 
 		token_data = self.get_auth0_tokens( self.HOST_Auth, self.CLIENT_ID, self.REDIRECT_URI, self.SCOPE_LIST, self.BROWSER )
@@ -182,8 +182,8 @@ class SmartLink(object):
 
 
 	def CloseLink(self):
-		pingThread.running = False
-		pingThread.join() # End thread manually
+		self.pingThread.running = False
+		self.pingThread.join() # End thread manually
 		self.wrapped_server_sock.close()
 		self.server_sock.close()
 
