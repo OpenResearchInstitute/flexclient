@@ -62,25 +62,35 @@ def main():
 	radioInfo = smartlink.GetRadioFromAvailable(SERIAL)
 	flexRadio = Radio(radioInfo, smartlink)
 
-	receiveThread = pkg.DataHandler.ReceiveData(flexRadio.FLEX_Sock)
-	receiveThread.start()
+	if flexRadio.serverHandle:
+		receiveThread = pkg.DataHandler.ReceiveData(flexRadio.FLEX_Sock)
+		receiveThread.start()
 
-	sleep(2)
+		sleep(2)
 
-	print("sending version command")
-	flexRadio.FLEX_Sock.send("C1|version\n".encode("cp1252"))
-	sleep(2)
+		print("sending version command")
+		flexRadio.FLEX_Sock.send("C1|version\n".encode("cp1252"))
+		sleep(2)
 
-	print("sending antenna_list request")
-	flexRadio.SendCommand("C16|ant list")
+		# flexRadio.SendCommand("C16|ant list")
+		# flexRadio.SendCommand("C41|slice list")
+		flexRadio.AddSlice(12, 'ANT1', 'am')
+		sleep(1)
+		flexRadio.SendCommand('C21|sub slice all')
+		sleep(2)
+		flexRadio.GetSlice(0).Tune(10)
+		sleep(1)
+		# flexRadio.SendCommand("C41|slice list")
+		# sleep(1)
 
-	pdb.set_trace()
+		pdb.set_trace()
 
-	flexRadio.CloseRadio()
-	smartlink.CloseLink()
+		receiveThread.running = False
+		flexRadio.CloseRadio()
+		smartlink.CloseLink()
 
-
-
+	else:
+		print("Connection Unsuccessful")
 
 
 
