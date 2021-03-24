@@ -3,13 +3,14 @@ import http.client, pdb, socket, ssl, threading, select
 
 class ReceiveData(threading.Thread):
 	""" Thread to contiually receive tcp data in BG """
-	def __init__(self, socket):
+	def __init__(self, radio):
 		threading.Thread.__init__(self, daemon=True)
-		self.socket = socket
+		self.radio = radio
 		self.running = True
+		# self.read_socks = []
 
 	def run(self):
-		read_socks = [self.socket]
+		read_socks = [self.radio.FLEX_Sock]
 		response = ""
 		while read_socks:
 			readable, w, e = select.select(read_socks,[],[],0)
@@ -17,7 +18,7 @@ class ReceiveData(threading.Thread):
 				data = s.recv(512).decode("cp1252")
 				response += data
 				if data.endswith("\n"):
-					ParseRead(response)
+					ParseRead(self.radio, response)
 					response = ""
 
 				# if not data:
@@ -28,24 +29,24 @@ class ReceiveData(threading.Thread):
 
 
 
-def ParseRead(string):
+def ParseRead(radio, string):
 	print(string)
 	read_type = string[0]
 	if read_type == "R":
-		ParseReply(string)
+		ParseReply(radio, string)
 	elif read_type == "S":
-		ParseStatus(string)
+		ParseStatus(radio, string)
 	elif read_type == "M":
-		ParseMessage(string)
+		ParseMessage(radio, string)
 	elif read_type == "H":
-		ParseHandle(string)
+		ParseHandle(radio, string)
 	elif read_type == "V":
-		ParseVersion(string)
+		ParseVersion(radio, string)
 	else:
-		print("Unknown response from radio") 
+		print("Unknown response from radio: " + radio.radioData["serial"]) 
 
 
-def ParseReply(string):
+def ParseReply(radio, string):
 	try:
 		(response_code, hex_code, msg) = string.split('|')
 	except ValueError:
@@ -53,38 +54,39 @@ def ParseReply(string):
 		return
 
 	# if int(hex_code) == 0:  # msg reponse is "OK"
-		# Add {reponse_code: msg} to replies_buffer[]
+		# Remove {reponse_code: msg} to radio.ResponseList[]
 
 
-def ParseStatus(string):
+def ParseStatus(radio, string):
 	try:
 		(radio_handle, msg) = string.split('|')
 	except ValueError:
 		print("Error - Invalid status message")
 		return
 
-	# if radio_handle == s + CLIENT_HANDLE:  # status message for this client i.e you
-		# Add msg to statuses_buffer[]
+	# if radio_handle == s + radio.ClientHandle:  # status message for this client i.e you
+		# Update radio settings OR Remove status from radio.StatusList[]
 
 
-def ParseMessage(string):
+def ParseMessage(radio, string):
 	try:
 		(MessageNum, msg) = string.split('|')
 	except ValueError:
 		print("Error - Invalid message")
 		return
 
-	# add msg to log
+	# add msg to log - logging.addMessage()
 
-
-def ParseHandle(string):
+""" redundant? """
+def ParseHandle(radio, string):
 	if len(string) >= 8:
-		CLIENT_HANDLE = string[1:9]
+		radio.ClientHandle = string[1:9]
 	else:
 		print("Error - Invalid handle returned")
 
 
-def ParseVersion(string):
-	# global CLIENT_HANDLE
-	CLIENT_HANDLE = string.split('H')[1].strip()
-	print("New Client Handle: " + CLIENT_HANDLE)
+def ParseVersion(radio, string):
+	radio.clientHandle = string.split('H')[1].strip()
+	print("New Client Handle: " + radio.clientHandle)
+
+
