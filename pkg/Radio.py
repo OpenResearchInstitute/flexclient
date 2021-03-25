@@ -12,13 +12,17 @@ class Radio(object):
 		context.verify_mode = ssl.CERT_NONE
 		self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 		self.FLEX_Sock = ssl.wrap_socket(self.sock)	# socket to comms with the FLEX radio
+		self.DATA_Sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
+		self.clientHandle = ""
 		self.serverHandle = self.SendConnectMessageToRadio()
 		if self.serverHandle:
 			self.FLEX_Sock.connect((self.radioData['public_ip'], int(self.radioData['public_upnp_tls_port'])))
 			print(self.FLEX_Sock.getpeername())
 			self.WanValidate()
 
+		self.ResponseList = []
+		self.StatusList = []
 		self.antList = []
 		self.sliceList = []
 
@@ -47,11 +51,20 @@ class Radio(object):
 		self.FLEX_Sock.send(command.encode("cp1252"))
 
 
+	def OpenUDPConnection(self):
+		command = "client udp_register handle=0x" + self.clientHandle
+		self.DATA_Sock.sendto(command.encode("cp1252"), (self.radioData["public_ip"], int(self.radioData["public_upnp_udp_port"])))
+
+
 	def SendCommand(self, string):
 		print(string)
 		command = (string + "\n").encode("cp1252")
 		self.FLEX_Sock.send(command)
 
+
+	def CreateAudioStream(self):
+		command = "C19|stream create type=remote_audio_rx compression=opus"
+		self.SendCommand(command)
 
 
 	def AddSlice(self, freq, ant, mode):
@@ -59,7 +72,7 @@ class Radio(object):
 		self.sliceList.append(Slice(self, freq, ant, mode))
 		# else:
 		# 	raise Exception("Chosen Antenna not available")
-		
+
 		# add reply expected to reply list = R21|0|0
 
 	def GetSlice(self, s_id):
