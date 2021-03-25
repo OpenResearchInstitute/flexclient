@@ -10,16 +10,21 @@ class ReceiveData(threading.Thread):
 		# self.read_socks = []
 
 	def run(self):
-		read_socks = [self.radio.FLEX_Sock]
-		response = ""
+		read_socks = [self.radio.FLEX_Sock, self.radio.DATA_Sock]
+		tcpResponse = ""
+		udpResponse = ""
 		while read_socks:
 			readable, w, e = select.select(read_socks,[],[],0)
 			for s in readable:
-				data = s.recv(512).decode("cp1252")
-				response += data
-				if data.endswith("\n"):
-					ParseRead(self.radio, response)
-					response = ""
+				if s.type == 1: # "SOCK_STREAM"
+					data = s.recv(512).decode("cp1252")
+					tcpResponse += data
+					if data.endswith("\n"):
+						ParseRead(self.radio, tcpResponse)
+						tcpResponse = ""
+				elif s.type == 2: # "SOCK_DGRAM"
+					udpResponse = s.recvfrom(1024)
+					print(udpResponse)
 
 				# if not data:
 				# 	read_socks.remove(s)
@@ -42,8 +47,8 @@ def ParseRead(radio, string):
 		ParseHandle(radio, string)
 	elif read_type == "V":
 		ParseVersion(radio, string)
-	else:
-		print("Unknown response from radio: " + radio.radioData["serial"]) 
+	# else:
+	# 	print("Unknown response from radio: " + radio.radioData["serial"]) 
 
 
 def ParseReply(radio, string):
