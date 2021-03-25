@@ -7,7 +7,7 @@ from pkg.Slice import Slice
 import pkg.DataHandler
 
 SERIAL = '1019-9534-6400-6018'  # should be set through user input at startup
-CLIENT_HANDLE = '' # changes every session, set during initialisation
+# CLIENT_HANDLE = '' # changes every session, set during initialisation
 
 
 # def main():
@@ -27,12 +27,15 @@ CLIENT_HANDLE = '' # changes every session, set during initialisation
 
 # 		print("sending version command")
 # 		myRadio.FLEX_Sock.send("C1|version\n".encode("cp1252"))
-# 		sleep(2)
+# 		sleep(1)
 
-# 		print("sending antenna_list request")
-# 		myRadio.SendCommand("C16|ant list")
+# 		myRadio.SendCommand("C41|slice list")
+# 		sleep(1)
 
 # 		slice1 = Slice(myRadio, 10, 'ANT1', 'am')
+# 		sleep(1)
+
+# 		myRadio.SendCommand("C41|slice list")
 
 # 		sleep(2)
 # 		pdb.set_trace()
@@ -61,33 +64,34 @@ def main():
 	smartlink = SmartLink()
 	radioInfo = smartlink.GetRadioFromAvailable(SERIAL)
 	flexRadio = Radio(radioInfo, smartlink)
-
 	if flexRadio.serverHandle:
-		receiveThread = pkg.DataHandler.ReceiveData(flexRadio.FLEX_Sock)
+		receiveThread = pkg.DataHandler.ReceiveData(flexRadio)
 		receiveThread.start()
 
 		sleep(2)
 
-		print("sending version command")
-		flexRadio.FLEX_Sock.send("C1|version\n".encode("cp1252"))
-		sleep(2)
-
-		# flexRadio.SendCommand("C16|ant list")
-		# flexRadio.SendCommand("C41|slice list")
-		flexRadio.AddSlice(12, 'ANT1', 'am')
-		sleep(1)
-		flexRadio.SendCommand('C21|sub slice all')
-		sleep(2)
-		flexRadio.GetSlice(0).Tune(10)
-		sleep(1)
-		# flexRadio.SendCommand("C41|slice list")
+		# print("sending version command")
+		# flexRadio.FLEX_Sock.send("C1|version\n".encode("cp1252"))
 		# sleep(1)
+
+		flexRadio.SendCommand("C41|slice list")
+		# flexRadio.SendCommand("C16|ant list")
+		sleep(1)
+		flexRadio.AddSlice(3.55, 'RX_A', 'lsb')
+		sleep(1)
+		flexRadio.SendCommand("C41|slice list")
+		sleep(1)
+		flexRadio.CreateAudioStream()
+		pdb.set_trace()
+		flexRadio.OpenUDPConnection()
 
 		pdb.set_trace()
 
+		flexRadio.GetSlice(0).Remove()
 		receiveThread.running = False
 		flexRadio.CloseRadio()
 		smartlink.CloseLink()
+		
 
 	else:
 		print("Connection Unsuccessful")
@@ -97,3 +101,16 @@ def main():
 if __name__ == "__main__":
 	main()
 
+"""
+1) Sent "slice create freq=3.550000 rxant=RX_A mode=LSB" to the radio
+via TLS (don't forget to remove it with "slice remove <index>" later!),
+2) Send "stream create type=remote_audio_rx compression=opus" to the
+radio via TLS; this resulted in a client_handle being returned to me (if
+creation of the stream was successful),
+3) Opened a UDP connection to the radio on the public UDP port (22000
+currently),
+4) Sent "client udp_register handle=<client_handle>" _VIA THAT NEW UDP
+CONNECTION_ to the radio (note there is no newline at the end of this
+command!)
+
+"""
