@@ -23,7 +23,7 @@ class ReceiveData(threading.Thread):
 						ParseRead(self.radio, tcpResponse)
 						tcpResponse = ""
 				elif s.type == 2: # "SOCK_DGRAM"
-					udpResponse = s.recvfrom(1024)
+					udpResponse, addr = s.recvfrom(2048)
 					print(udpResponse)
 
 				# if not data:
@@ -47,24 +47,50 @@ def ParseRead(radio, string):
 		ParseHandle(radio, string)
 	elif read_type == "V":
 		ParseVersion(radio, string)
-	# else:
-	# 	print("Unknown response from radio: " + radio.radioData["serial"]) 
+	else:
+		print("Unknown response from radio: " + radio.radioData["serial"]) 
 
 
 def ParseReply(radio, string):
 	try:
-		(response_code, hex_code, msg) = string.split('|')
+		(response_code, hex_code, rec_msg) = string.split('|')
 	except ValueError:
 		print("Error - Incomplete reply")
 		return
 
-	# if int(hex_code) == 0:  # msg reponse is "OK"
-		# Remove {reponse_code: msg} to radio.ResponseList[]
+	response_code = int(response_code[1:])
+	hex_code = int(hex_code)
+	rec_msg = rec_msg.strip()
+	try:
+		sent_msg = radio.ResponseList[response_code]
+	except ValueError:
+		print('Unexpected reply')
+	
+	if "slice create" in sent_msg:
+		if int(hex_code) != 0:
+			# log error
+			pass
+		radio.SliceList.append(int(rec_msg))
+	elif "slice r" in sent_msg:
+		if int(hex_code) != 0:
+			# log error
+			pass
+		radio.SliceList.remove(int(sent_msg[-1]))
+	elif "slice list" in sent_msg:
+		if int(hex_code) != 0:
+			# log error
+			pass
+		radio.SliceList = rec_msg.split(sep=" ")
+
+	radio.ResponseList.pop(response_code)
+
+	# if int(hex_code) == 0:  # rec_msg reponse is "OK"
+		# Remove {reponse_code: rec_msg} to radio.ResponseList[]
 
 
 def ParseStatus(radio, string):
 	try:
-		(radio_handle, msg) = string.split('|')
+		(radio_handle, rec_msg) = string.split('|')
 	except ValueError:
 		print("Error - Invalid status message")
 		return
@@ -75,12 +101,12 @@ def ParseStatus(radio, string):
 
 def ParseMessage(radio, string):
 	try:
-		(MessageNum, msg) = string.split('|')
+		(MessageNum, rec_msg) = string.split('|')
 	except ValueError:
 		print("Error - Invalid message")
 		return
 
-	# add msg to log - logging.addMessage()
+	# add rec_msg to log - logging.addMessage()
 
 """ redundant? """
 def ParseHandle(radio, string):
