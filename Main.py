@@ -71,23 +71,27 @@ def main():
 		sleep(2)
 
 		# print("sending version command")
-		# flexRadio.FLEX_Sock.send("C1|version\n".encode("cp1252"))
+		# flexRadio.FLEX_Sock.send("version\n".encode("cp1252"))
 		# sleep(1)
 
-		flexRadio.SendCommand("C41|slice list")
-		# flexRadio.SendCommand("C16|ant list")
+		flexRadio.SendCommand("slice list")
+		# flexRadio.SendCommand("ant list")
 		sleep(1)
 		flexRadio.AddSlice(3.55, 'RX_A', 'lsb')
+		flexRadio.SendCommand('sub slice all')
+		# sleep(1)
+		# flexRadio.GetSlice(0).Tune(10)
 		sleep(1)
-		flexRadio.SendCommand("C41|slice list")
+		flexRadio.SendCommand("slice list")
 		sleep(1)
+		
 		flexRadio.CreateAudioStream()
-		pdb.set_trace()
 		flexRadio.OpenUDPConnection()
 
 		pdb.set_trace()
 
 		flexRadio.GetSlice(0).Remove()
+		sleep(1)
 		receiveThread.running = False
 		flexRadio.CloseRadio()
 		smartlink.CloseLink()
