@@ -3,8 +3,14 @@ from pkg.Slice import Slice
 
 
 class Radio(object):
+	cmdCnt = 0
 	""" Class to create connection with FLEX radio and establish communication channel """
 	def __init__(self, radioData, smartlink):
+		self.ResponseList = {}
+		self.StatusList = []
+		self.antList = []
+		self.sliceList = []
+
 		self.smartlink_sock = smartlink.wrapped_server_sock	# socket to comms with Smartlink
 		self.radioData = radioData	# info for the radio about itself
 		context = ssl.create_default_context()
@@ -18,13 +24,9 @@ class Radio(object):
 		self.serverHandle = self.SendConnectMessageToRadio()
 		if self.serverHandle:
 			self.FLEX_Sock.connect((self.radioData['public_ip'], int(self.radioData['public_upnp_tls_port'])))
-			print(self.FLEX_Sock.getpeername())
+			# print(self.FLEX_Sock.getpeername())
 			self.WanValidate()
-
-		self.ResponseList = []
-		self.StatusList = []
-		self.antList = []
-		self.sliceList = []
+			self.SendCommand("client gui")
 
 
 	def SendConnectMessageToRadio(self):
@@ -36,7 +38,7 @@ class Radio(object):
 		print("\nSending connect message: " + command)
 		self.smartlink_sock.send(command.encode("cp1252"))
 		handle_data = self.smartlink_sock.recv(128).decode("cp1252")
-		print(handle_data)
+		# print(handle_data)
 		try:
 			handle = handle_data.split('handle=')[1].strip()
 			return handle
@@ -46,9 +48,9 @@ class Radio(object):
 
 
 	def WanValidate(self):
-		command = "C1|wan validate handle=" + self.serverHandle + "\n"
+		command = "wan validate handle=" + self.serverHandle + "\n"
 		print("\nSending Wan Validate command: " + command + "\n")
-		self.FLEX_Sock.send(command.encode("cp1252"))
+		self.SendCommand(command)
 
 
 	def OpenUDPConnection(self):
@@ -57,13 +59,15 @@ class Radio(object):
 
 
 	def SendCommand(self, string):
-		print(string)
-		command = (string + "\n").encode("cp1252")
+		self.cmdCnt += 1
+		self.ResponseList[self.cmdCnt] =  string
+		print(self.cmdCnt, string)
+		command = ("C" + str(self.cmdCnt) + "|" + string + "\n").encode("cp1252")
 		self.FLEX_Sock.send(command)
 
 
 	def CreateAudioStream(self):
-		command = "C19|stream create type=remote_audio_rx compression=opus"
+		command = "stream create type=remote_audio_rx compression=opus"
 		self.SendCommand(command)
 
 
@@ -81,6 +85,9 @@ class Radio(object):
 
 	def RemoveSlice(self, slice_id):
 		GetSlice(slice_id).Remove()
+
+	def UpdateSliceList(self):
+		self.SendCommand("slice list")
 
 
 	def CloseRadio(self):
