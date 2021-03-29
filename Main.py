@@ -23,31 +23,28 @@ def main():
 
 		# print("sending version command")
 		# flexRadio.FLEX_Sock.send("version\n".encode("cp1252"))
-		# sleep(1)
 
-		flexRadio.SendCommand("slice list")
-		# flexRadio.SendCommand("ant list")
-		sleep(1)
-		flexRadio.AddSlice(3.55, 'RX_A', 'lsb')
+		flexRadio.UpdateAntList()
 		flexRadio.SendCommand('sub slice all')
-		# sleep(1)
-		# flexRadio.GetSlice(0).Tune(10)
+		flexRadio.GetSliceList()
+		# pdb.set_trace()
 		sleep(1)
-		flexRadio.SendCommand("slice list")
+		# flexRadio.AddSlice(3.55, 'RX_A', 'lsb')
+		sleep(1)
+		flexRadio.GetSliceList()
 		sleep(1)
 		
 		flexRadio.CreateAudioStream()
 		flexRadio.OpenUDPConnection()
 
-		pdb.set_trace()
-
+		sleep(5)
 		flexRadio.GetSlice(0).Remove()
-		sleep(1)
+
+
 		receiveThread.running = False
 		flexRadio.CloseRadio()
 		smartlink.CloseLink()
 		
-
 	else:
 		print("Connection Unsuccessful")
 
