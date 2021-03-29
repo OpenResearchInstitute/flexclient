@@ -8,8 +8,8 @@ class Radio(object):
 	def __init__(self, radioData, smartlink):
 		self.ResponseList = {}
 		self.StatusList = []
-		self.antList = []
-		self.sliceList = []
+		self.AntList = []
+		self.SliceList = [Slice(self, 0, "ANT1", "fm")]	# FLEX has a default slice on start up 
 
 		self.smartlink_sock = smartlink.wrapped_server_sock	# socket to comms with Smartlink
 		self.radioData = radioData	# info for the radio about itself
@@ -60,8 +60,8 @@ class Radio(object):
 
 	def SendCommand(self, string):
 		self.cmdCnt += 1
-		self.ResponseList[self.cmdCnt] =  string
-		print(self.cmdCnt, string)
+		self.ResponseList[self.cmdCnt] = string # expecting a response back from the radio regarding this command
+		print("C" + str(self.cmdCnt) + "|" + string)
 		command = ("C" + str(self.cmdCnt) + "|" + string + "\n").encode("cp1252")
 		self.FLEX_Sock.send(command)
 
@@ -71,23 +71,40 @@ class Radio(object):
 		self.SendCommand(command)
 
 
-	def AddSlice(self, freq, ant, mode):
-		# if ant in self.antList:
-		self.sliceList.append(Slice(self, freq, ant, mode))
-		# else:
-		# 	raise Exception("Chosen Antenna not available")
+	""" Slice Methods """
+	def AddSlice(self, freq, ant, mode, streamID=None, source_slice=None):
+		newSlice = Slice(self, freq, ant, mode)
+
+		command = "slice create"
+		command += (" freq=" + newSlice.freq)
+		if streamID is not None:
+			newSlice.slice_id = streamID
+			command += (" pan=0x" + str(newSlice.slice_id))
+		command += (" ant=" + newSlice.ant)
+		command += (" mode=" + newSlice.mode)
+		if source_slice is not None:
+			command += (" clone_slice=" + str(source_slice))
+		
+		self.SliceList.append(newSlice)
+		self.radio.SendCommand(command)
 
 		# add reply expected to reply list = R21|0|0
 
 	def GetSlice(self, s_id):
-		""" We want the slice with corresponding id (as this is what FLEX recognises) """
-		return [s for s in self.sliceList if s.slice_id == s_id][0]
+		return [s for s in self.SliceList if s.slice_id == s_id][0]
+		# We want the slice with corresponding id (as this is what FLEX recognises)
 
 	def RemoveSlice(self, slice_id):
-		GetSlice(slice_id).Remove()
+		self.GetSlice(slice_id).Remove()
+		# Can't remove slice from local list until radio confirms 
 
-	def UpdateSliceList(self):
+	def GetSliceList(self):
 		self.SendCommand("slice list")
+	""" 				"""
+
+
+	def UpdateAntList(self):
+		self.SendCommand("ant list")
 
 
 	def CloseRadio(self):
