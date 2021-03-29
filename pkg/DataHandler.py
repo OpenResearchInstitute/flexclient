@@ -20,10 +20,10 @@ class ReceiveData(threading.Thread):
 					data = s.recv(512).decode("cp1252")
 					tcpResponse += data
 					if data.endswith("\n"):
-						ParseRead(self.radio, tcpResponse)
+						ParseRead(self.radio, tcpResponse.rstrip())
 						tcpResponse = ""
 				elif s.type == 2: # "SOCK_DGRAM"
-					udpResponse, addr = s.recvfrom(2048)
+					udpResponse, addr = s.recvfrom(8192)
 					print(udpResponse)
 
 				# if not data:
@@ -35,9 +35,10 @@ class ReceiveData(threading.Thread):
 
 
 def ParseRead(radio, string):
-	print(string)
+	# print(string)
 	read_type = string[0]
 	if read_type == "R":
+		print(string)
 		ParseReply(radio, string)
 	elif read_type == "S":
 		ParseStatus(radio, string)
@@ -60,32 +61,36 @@ def ParseReply(radio, string):
 
 	response_code = int(response_code[1:])
 	hex_code = int(hex_code)
-	rec_msg = rec_msg.strip()
+	# rec_msg = rec_msg.strip()
 	try:
 		sent_msg = radio.ResponseList[response_code]
 	except ValueError:
 		print('Unexpected reply')
 	
 	if "slice create" in sent_msg:
-		if int(hex_code) != 0:
+		if hex_code != 0:
 			# log error
 			pass
-		radio.SliceList.append(int(rec_msg))
 	elif "slice r" in sent_msg:
-		if int(hex_code) != 0:
+		if hex_code != 0:
 			# log error
 			pass
-		radio.SliceList.remove(int(sent_msg[-1]))
+		# remove self now that radio has confirmed deletion
+		s_id = int(sent_msg[-1])
+		radio.SliceList.remove(radio.GetSlice(s_id))
 	elif "slice list" in sent_msg:
-		if int(hex_code) != 0:
+		if hex_code != 0:
 			# log error
 			pass
-		radio.SliceList = rec_msg.split(sep=" ")
+		# radio.SliceList = rec_msg.split(sep=" ") # HOW TO USE |0 1 to update Slicelist??
+	elif "ant list" in sent_msg:
+		if hex_code != 0:
+			# log error
+			pass
+		radio.AntList = rec_msg.split(sep=",")
+
 
 	radio.ResponseList.pop(response_code)
-
-	# if int(hex_code) == 0:  # rec_msg reponse is "OK"
-		# Remove {reponse_code: rec_msg} to radio.ResponseList[]
 
 
 def ParseStatus(radio, string):
@@ -95,8 +100,21 @@ def ParseStatus(radio, string):
 		print("Error - Invalid status message")
 		return
 
-	# if radio_handle == s + radio.ClientHandle:  # status message for this client i.e you
-		# Update radio settings OR Remove status from radio.StatusList[]
+	if radio_handle == "S" + radio.clientHandle:  # status message for this client i.e you
+		if rec_msg.startswith("slice"):
+			s_id = int(rec_msg[6])
+			# print(rec_msg+"\n")
+			slice_info = dict(param.split("=") for param in rec_msg[8:].split(" "))
+			# print(slice_info)
+			try:
+				radio.GetSlice(s_id).freq = float(slice_info["RF_frequency"])
+				radio.GetSlice(s_id).mode = slice_info["mode"]
+				radio.GetSlice(s_id).ant = slice_info["rxant"]
+			except KeyError:
+				pass
+		elif rec_msg.startswith("radio"):
+			pass
+
 
 
 def ParseMessage(radio, string):
@@ -107,6 +125,7 @@ def ParseMessage(radio, string):
 		return
 
 	# add rec_msg to log - logging.addMessage()
+
 
 """ redundant? """
 def ParseHandle(radio, string):
@@ -119,5 +138,19 @@ def ParseHandle(radio, string):
 def ParseVersion(radio, string):
 	radio.clientHandle = string.split('H')[1].strip()
 	print("New Client Handle: " + radio.clientHandle)
+
+
+
+# def GetSubscriptionInfo(subString, desiredTxt):
+# 		""" retrieve necessary radio info """
+# 		subString = subString.split(' ')
+# 		slice_id = subString[1]
+# 		for param in subString:
+# 			for txt in desiredTxt.keys():	# need exact match not string.contain i.e "mode" is also in "agc_mode"
+# 				if (txt + "=") in param:
+# 					desiredTxt[txt] = param.split('=')[1]
+
+# 		# pdb.set_trace()
+# 		return slice_id, desiredTxt
 
 
