@@ -13,11 +13,11 @@ class PingServer(threading.Thread):
 		self.running = True
 
 	def run(self):
-		print("\n...Thread started...\n")
+		# print("\n...Thread started...\n")
 		while self.running:
 			self.socket.send("ping from client\n".encode("cp1252"))
 			sleep(5)
-		print("\n...Thread ended...\n")
+		# print("\n...Thread ended...\n")
 
 
 class SmartLink(object):
@@ -59,12 +59,12 @@ class SmartLink(object):
 		state = "".join( choices( ascii_letters + digits, k = state_len ) )       # was "ypfolheqwpezrxdb" when testing
 
 		conn = http.client.HTTPSConnection( host )
-		print(conn)
+		# print(conn)
 		# Step 1: request an auth0 code
 		#   (this seems to return a redirect to a login URL)
 		url1 = "/authorize"
 		payload1 = "response_type=code&client_id=" + client_id + "&redirect_uri=" + redirect_uri + "&scope=" + scope + "&state=" + state
-		print(url1 + "?" + payload1)
+		# print(url1 + "?" + payload1)
 		conn.request( "GET", url1 + "?" + payload1 )
 		response = self.get_response( conn )
 		#print( response )
@@ -111,7 +111,7 @@ class SmartLink(object):
 		rstr = '"id_token":"'
 		if response.find( rstr ) != -1:
 			response = loads( response )
-			#print( "id_token is:", response[ "id_token" ] )
+			# print( "id_token is:", response[ "id_token" ] )
 			return response
 		else:
 			print( "ERROR: id_token was not returned by the auth0 server" )
@@ -128,7 +128,7 @@ class SmartLink(object):
 		command = "application register name=" + appName + " platform=" + platform + " token=" + token + '\n'
 		radioData = []
 		if self.wrapped_server_sock.version() != None:
-			print(self.wrapped_server_sock.version())
+			# print(self.wrapped_server_sock.version())
 			self.wrapped_server_sock.send(command.encode("cp1252"))
 			""" Communicate with SmartLink Server """
 			inputs = [self.wrapped_server_sock]
