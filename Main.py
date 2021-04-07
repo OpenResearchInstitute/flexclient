@@ -27,9 +27,8 @@ def main():
 		flexRadio.UpdateAntList()
 		flexRadio.SendCommand('sub slice all')
 		flexRadio.GetSliceList()
-		# pdb.set_trace()
-		sleep(1)
-		# flexRadio.AddSlice(3.55, 'RX_A', 'lsb')
+		flexRadio.SendCommand("sub pan all")
+		
 		sleep(1)
 		flexRadio.GetSliceList()
 		sleep(1)
@@ -37,10 +36,13 @@ def main():
 		flexRadio.CreateAudioStream()
 		flexRadio.OpenUDPConnection()
 
-		sleep(5)
+		sleep(3)
+		flexRadio.RemoveAudioStream()
+		pdb.set_trace()
+
+
+
 		flexRadio.GetSlice(0).Remove()
-
-
 		receiveThread.running = False
 		flexRadio.CloseRadio()
 		smartlink.CloseLink()
