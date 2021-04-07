@@ -10,6 +10,7 @@ class Radio(object):
 		self.StatusList = []
 		self.AntList = []
 		self.SliceList = [Slice(self, 0, "ANT1", "fm")]	# FLEX has a default slice on start up 
+		self.PanList = []
 
 		self.smartlink_sock = smartlink.wrapped_server_sock	# socket to comms with Smartlink
 		self.radioData = radioData	# info for the radio about itself
@@ -70,6 +71,13 @@ class Radio(object):
 		command = "stream create type=remote_audio_rx compression=opus"
 		self.SendCommand(command)
 
+	def RemoveAudioStream(self):
+		try:
+			command = "stream remove 0x" + self.RxAudioId
+			self.SendCommand(command)
+		except AttributeError:
+			print("Radio does not have an audio stream to remove!")
+
 
 	""" Slice Methods """
 	def AddSlice(self, freq, ant, mode, streamID=None, source_slice=None):
@@ -103,14 +111,33 @@ class Radio(object):
 	""" 				"""
 
 
+	""" Pan Methods """
+
+	""" 		"""
+
+
 	def UpdateAntList(self):
 		self.SendCommand("ant list")
 
 
 	def CloseRadio(self):
+		# del self
 		self.SendCommand("client disconnect " + self.serverHandle)
 		self.FLEX_Sock.close()
 		self.sock.close()
 
 
 
+	# def __del__(self):
+	# 	self.SendCommand("client disconnect " + self.serverHandle)
+	# 	self.FLEX_Sock.close()
+	# 	self.sock.close()
+
+"""
+sub pan all
+display panafall create x=1024 y=700
+display panafall set 0x40000000 center=1.00 autocenter=0 bandwidth=0.1
+sub daxiq all
+stream create daxiq=1
+dax iq set 1 pan=0x40000000 rate=24000
+"""
