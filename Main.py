@@ -1,10 +1,8 @@
 import http.client, pdb, socket, ssl, threading, select
 from time import sleep          # Needed to prevent busy-waiting for the browser to complete the login process!
-from pkg.Initialiser import ConnectRadio
-from pkg.SmartLink import SmartLink
-from pkg.Radio import Radio
-from pkg.Slice import Slice
-import pkg.DataHandler
+from FlexModule.SmartLink import SmartLink
+from FlexModule.Radio import Radio
+import FlexModule.DataHandler
 
 SERIAL = '1019-9534-6400-6018'  # should be set through user input at startup
 
@@ -16,7 +14,7 @@ def main():
 	radioInfo = smartlink.GetRadioFromAvailable(SERIAL)
 	flexRadio = Radio(radioInfo, smartlink)
 	if flexRadio.serverHandle:
-		receiveThread = pkg.DataHandler.ReceiveData(flexRadio)
+		receiveThread = FlexModule.DataHandler.ReceiveData(flexRadio)
 		receiveThread.start()
 
 		sleep(2)
@@ -29,16 +27,18 @@ def main():
 		flexRadio.GetSliceList()
 		flexRadio.SendCommand("sub pan all")
 		
-		sleep(1)
-		flexRadio.GetSliceList()
-		sleep(1)
-		
-		flexRadio.CreateAudioStream()
+		flexRadio.CreateAudioStream(False)
+		while not flexRadio.RxAudioStreamer:
+			continue
 		flexRadio.OpenUDPConnection()
 
 		sleep(3)
-		flexRadio.RemoveAudioStream()
-		pdb.set_trace()
+		print("Stream Buffer: ", flexRadio.RxAudioStreamer.outBuffer.qsize())
+		flexRadio.GetSlice(0).Tune(7.5)
+		sleep(3)
+		print("Stream Buffer: ", flexRadio.RxAudioStreamer.outBuffer.qsize())
+		flexRadio.RxAudioStreamer.WriteToFile()
+		flexRadio.RxAudioStreamer.Close()
 
 
 
