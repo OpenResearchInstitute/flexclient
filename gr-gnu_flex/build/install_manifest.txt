@@ -1,0 +1,9 @@
+/usr/local/lib/cmake/gnu_flex/gnu_flexConfig.cmake
+/usr/local/include/gnu_flex/api.h
+/usr/local/lib/python3/dist-packages/gnu_flex/__init__.py
+/usr/local/lib/python3/dist-packages/gnu_flex/FlexSource.py
+/usr/local/lib/python3/dist-packages/gnu_flex/__init__.pyc
+/usr/local/lib/python3/dist-packages/gnu_flex/FlexSource.pyc
+/usr/local/lib/python3/dist-packages/gnu_flex/__init__.pyo
+/usr/local/lib/python3/dist-packages/gnu_flex/FlexSource.pyo
+/usr/local/share/gnuradio/grc/blocks/gnu_flex_FlexSource.block.yml

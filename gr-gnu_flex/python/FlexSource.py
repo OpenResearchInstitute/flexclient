@@ -41,32 +41,42 @@ class FlexSource(gr.sync_block):
         radioInfo = smartlink.GetRadioFromAvailable(self.serial)
         self.flexRadio = Radio(radioInfo, self.smartlink)
 
-        self.flexRadio.serverHandle:
-        receiveThread = FlexModule.DataHandler.ReceiveData(self.flexRadio)
-        receiveThread.start()
+        if self.flexRadio.serverHandle:
+            receiveThread = FlexModule.DataHandler.ReceiveData(self.flexRadio)
+            receiveThread.start()
 
-        self.flexRadio.UpdateAntList()
-        self.flexRadio.SendCommand('sub slice all')
-        self.flexRadio.SendCommand("sub pan all")
+            self.flexRadio.UpdateAntList()
+            self.flexRadio.SendCommand('sub slice all')
+            self.flexRadio.SendCommand("sub pan all")
 
-        self.flexRadio.CreateAudioStream(False)
+            self.flexRadio.CreateAudioStream(False)
 
-        """ should find a nicer way of doing this """
-        for _ in range(5):
-            if not self.flexRadio.RxAudioStreamer:
-                sleep(1)
-        self.flexRadio.OpenUDPConnection()
+            """ should find a nicer way of doing this """
+            for _ in range(5):
+                if not self.flexRadio.RxAudioStreamer:
+                    sleep(1)
+            self.flexRadio.OpenUDPConnection()
+        else:
+            # raise exception in GR interface
+            return
 
 
     def work(self, input_items, output_items):
         out = output_items[0]
-        # <+signal processing here+>
-        if self.flexRadio.RxAudioStreamer.isCompressed:
+        
+        # if self.flexRadio.RxAudioStreamer.isCompressed:
             # do Opus decompression
         
-        while not self.flexRadio.RxAudioStreamer.outBuffer.empty() or len(out) >= len(output_items[0]):
-            out.append(self.flexRadio.RxAudioStreamer.outBuffer.get_nowait())
-        # out[:] = something
+        """ list implementation """    
+        temp = numpy.array(self.flexRadio.RxAudioStreamer.outBuffer)
+        out[:] = temp
+        del self.flexRadio.RxAudioStreamer.outBuffer[0:len(temp)]
+
+
+        """ Queue() implementation"""
+        # while not self.flexRadio.RxAudioStreamer.outBuffer.empty() or len(out) >= len(output_items[0]):
+        #     out.append(self.flexRadio.RxAudioStreamer.outBuffer.get_nowait())
+        
         return len(output_items[0])
 
 

@@ -8,7 +8,8 @@ class RxRemoteAudioStream(object):
 		self.radio = radio
 		self.stream_id = stream_id
 		self.isCompressed = isCompressed
-		self.outBuffer = Queue()
+		# self.outBuffer = Queue()
+		self.outBuffer = []
 		# self.RxGain = 50
 
 
@@ -25,5 +26,7 @@ class RxRemoteAudioStream(object):
 	
 	def WriteToFile(self):
 		with open("sample.bin", "wb") as outfile:
-			for i in range(self.outBuffer.qsize()):
-				outfile.write(self.outBuffer.get())
+			# for i in range(self.outBuffer.qsize()):
+			# 	outfile.write(self.outBuffer.get())
+			for i in self.outBuffer:
+				outfile.write(i)

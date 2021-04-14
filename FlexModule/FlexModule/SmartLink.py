@@ -49,7 +49,7 @@ class SmartLink(object):
 	#  The browser is set to Firefox() currently, but can be any which the Selenium module supports (e.g. Chrome()).
 	#  The output is None for an unsuccessful login, or the response dictionary for a successful one.
 	#  The token required by smartlink.flexradio.com is stored under the key "id_token".
-	def get_auth0_tokens(self, host, client_id, redirect_uri, scope_list, browser = 'chrome' ):
+	def get_auth0_tokens(self, host, client_id, redirect_uri, scope_list, browser):
 		""" to hide non-harmful error """
 		options = webdriver.ChromeOptions()
 		options.add_experimental_option('excludeSwitches', ['enable-logging'])

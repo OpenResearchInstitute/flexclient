@@ -3,6 +3,7 @@ from time import sleep          # Needed to prevent busy-waiting for the browser
 from FlexModule.SmartLink import SmartLink
 from FlexModule.Radio import Radio
 import FlexModule.DataHandler
+import numpy, time
 
 SERIAL = '1019-9534-6400-6018'  # should be set through user input at startup
 
@@ -33,16 +34,25 @@ def main():
 		flexRadio.OpenUDPConnection()
 
 		sleep(3)
-		print("Stream Buffer: ", flexRadio.RxAudioStreamer.outBuffer.qsize())
+		print("Stream Buffer: ", len(flexRadio.RxAudioStreamer.outBuffer))
 		flexRadio.GetSlice(0).Tune(7.5)
 		sleep(3)
-		print("Stream Buffer: ", flexRadio.RxAudioStreamer.outBuffer.qsize())
-		flexRadio.RxAudioStreamer.WriteToFile()
+		print("Stream Buffer: ", len(flexRadio.RxAudioStreamer.outBuffer))
+		flexRadio.GetSlice(0).Remove()
+
+		start = time.process_time()
+		gnuBuf = numpy.array([])
+		# while not flexRadio.RxAudioStreamer.outBuffer.empty():
+		# 	numpy.append(gnuBuf, flexRadio.RxAudioStreamer.outBuffer.get_nowait())
+		temp = numpy.array()
+		out[:] = temp
+		print(time.process_time() - start)
+
+
 		flexRadio.RxAudioStreamer.Close()
 
 
 
-		flexRadio.GetSlice(0).Remove()
 		receiveThread.running = False
 		flexRadio.CloseRadio()
 		smartlink.CloseLink()
