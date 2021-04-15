@@ -248,16 +248,16 @@ def ParseVitaPacket(radio, packet):
 		opusData = ParseOpusPacket(packet)
 		print("OPUS data: \n", opusData, "\n")
 		if radio.RxAudioStreamer:
-			# radio.RxAudioStreamer.outBuffer.put_nowait(opusData)
-			radio.RxAudioStreamer.outBuffer.append(opusData)
+			radio.RxAudioStreamer.outBuffer.put_nowait(opusData)
+			# radio.RxAudioStreamer.outBuffer.append(opusData)
 	elif Id == int('3E3',16):
 		# IF NARROW Packet
 		rawData = ParseIfNarrowPacket(packet)
 		# print("IF-NARROW data \n:", rawData, "\n")
 		if radio.RxAudioStreamer:
 			for flt in iter_unpack("<f",rawData):	# take every 4 bytes and cast to float
-				# radio.RxAudioStreamer.outBuffer.put_nowait(flt[0])	# iter_unpack returns tuple of 1 item
-				radio.RxAudioStreamer.outBuffer.append(flt[0])
+				radio.RxAudioStreamer.outBuffer.put_nowait(flt[0])	# iter_unpack returns tuple of 1 item
+				# radio.RxAudioStreamer.outBuffer.append(flt[0])
 
 
 def ParseOpusPacket(packet):

@@ -54,7 +54,7 @@ class SmartLink(object):
 		options = webdriver.ChromeOptions()
 		options.add_experimental_option('excludeSwitches', ['enable-logging'])
 		""" """
-		browsers = { 'firefox' : webdriver.Firefox, 'chrome' : webdriver.Chrome(options=options)}
+		browsers = { 'chrome' : webdriver.Chrome(options=options, executable_path=r"C:\Program Files\chromedriver_win32\chromedriver.exe")} #,'firefox' : webdriver.Firefox(executable_path=GeckoDriverManager().install()) }
 		scope = "%20".join( scope_list )
 		state_len = 16
 		state = "".join( choices( ascii_letters + digits, k = state_len ) )       # was "ypfolheqwpezrxdb" when testing

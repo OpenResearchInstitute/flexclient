@@ -34,18 +34,17 @@ def main():
 		flexRadio.OpenUDPConnection()
 
 		sleep(3)
-		print("Stream Buffer: ", len(flexRadio.RxAudioStreamer.outBuffer))
+		print("Stream Buffer: ", flexRadio.RxAudioStreamer.outBuffer.qsize())
 		flexRadio.GetSlice(0).Tune(7.5)
 		sleep(3)
-		print("Stream Buffer: ", len(flexRadio.RxAudioStreamer.outBuffer))
+		print("Stream Buffer: ", flexRadio.RxAudioStreamer.outBuffer.qsize())
 		flexRadio.GetSlice(0).Remove()
 
 		start = time.process_time()
-		gnuBuf = numpy.array([])
-		# while not flexRadio.RxAudioStreamer.outBuffer.empty():
-		# 	numpy.append(gnuBuf, flexRadio.RxAudioStreamer.outBuffer.get_nowait())
-		temp = numpy.array()
-		out[:] = temp
+		temp = []
+		while not flexRadio.RxAudioStreamer.outBuffer.empty():
+			temp.append(flexRadio.RxAudioStreamer.outBuffer.get_nowait())
+		gnu_buf = numpy.array(temp)
 		print(time.process_time() - start)
 
 

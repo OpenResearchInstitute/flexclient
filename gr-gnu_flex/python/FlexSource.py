@@ -68,14 +68,17 @@ class FlexSource(gr.sync_block):
             # do Opus decompression
         
         """ list implementation """    
-        temp = numpy.array(self.flexRadio.RxAudioStreamer.outBuffer)
-        out[:] = temp
-        del self.flexRadio.RxAudioStreamer.outBuffer[0:len(temp)]
+        # temp = numpy.array(self.flexRadio.RxAudioStreamer.outBuffer)
+        # out[:] = temp
+        # del self.flexRadio.RxAudioStreamer.outBuffer[0:len(temp)]
 
 
         """ Queue() implementation"""
-        # while not self.flexRadio.RxAudioStreamer.outBuffer.empty() or len(out) >= len(output_items[0]):
-        #     out.append(self.flexRadio.RxAudioStreamer.outBuffer.get_nowait())
+        out_len = min(len(output_items[0]), flexRadio.RxAudioStreamer.outBuffer.qsize())
+        temp = []
+        for i in range(out_len):
+            temp.append(self.flexRadio.RxAudioStreamer.outBuffer.get_nowait())
+        out = numpy.array(temp)
         
         return len(output_items[0])
 
