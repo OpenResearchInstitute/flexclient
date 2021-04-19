@@ -40,7 +40,11 @@ class SmartLink(object):
 		self.pingThread.start()
 
 
-		token_data = self.get_auth0_tokens( self.HOST_Auth, self.CLIENT_ID, self.REDIRECT_URI, self.SCOPE_LIST, self.BROWSER )
+		# token_data = self.get_auth0_tokens( self.HOST_Auth, self.CLIENT_ID, self.REDIRECT_URI, self.SCOPE_LIST, self.BROWSER )?
+		token_data = {}
+		with open("token.txt", "r") as infile:
+			token_data['id_token'] = infile.readline()
+
 		self.radio_list = self.SendRegisterApplicationMessageToServer("FlexModule", self.OS, token_data['id_token'])
 
 
@@ -130,6 +134,7 @@ class SmartLink(object):
 		radioData = []
 		if self.wrapped_server_sock.version() != None:
 			# print(self.wrapped_server_sock.version())
+			print(command)
 			self.wrapped_server_sock.send(command.encode("cp1252"))
 			""" Communicate with SmartLink Server """
 			inputs = [self.wrapped_server_sock]

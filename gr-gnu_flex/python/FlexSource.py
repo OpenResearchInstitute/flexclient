@@ -38,8 +38,8 @@ class FlexSource(gr.sync_block):
         self.serial = serial
 
         self.smartLink = SmartLink()    # relies on a Windows operating machine as it sends "Windows_NT" when registering with radio
-        radioInfo = smartlink.GetRadioFromAvailable(self.serial)
-        self.flexRadio = Radio(radioInfo, self.smartlink)
+        self.radioInfo = self.smartlink.GetRadioFromAvailable(self.serial)
+        self.flexRadio = Radio(self.radioInfo, self.smartlink)
 
         if self.flexRadio.serverHandle:
             receiveThread = FlexModule.DataHandler.ReceiveData(self.flexRadio)
