@@ -24,6 +24,7 @@ import numpy
 from gnuradio import gr
 from FlexModule.SmartLink import SmartLink
 from FlexModule.Radio import Radio
+from time import sleep
 import FlexModule.DataHandler
 
 class FlexSource(gr.sync_block):
@@ -38,8 +39,8 @@ class FlexSource(gr.sync_block):
         self.serial = serial
 
         self.smartLink = SmartLink()    # relies on a Windows operating machine as it sends "Windows_NT" when registering with radio
-        self.radioInfo = self.smartlink.GetRadioFromAvailable(self.serial)
-        self.flexRadio = Radio(self.radioInfo, self.smartlink)
+        self.radioInfo = self.smartLink.GetRadioFromAvailable(self.serial)
+        self.flexRadio = Radio(self.radioInfo, self.smartLink)
 
         if self.flexRadio.serverHandle:
             receiveThread = FlexModule.DataHandler.ReceiveData(self.flexRadio)
@@ -63,7 +64,6 @@ class FlexSource(gr.sync_block):
 
     def work(self, input_items, output_items):
         out = output_items[0]
-        
         # if self.flexRadio.RxAudioStreamer.isCompressed:
             # do Opus decompression
         
@@ -74,15 +74,17 @@ class FlexSource(gr.sync_block):
 
 
         """ Queue() implementation"""
-        out_len = min(len(output_items[0]), flexRadio.RxAudioStreamer.outBuffer.qsize())
+        out_len = min(len(output_items[0]), self.flexRadio.RxAudioStreamer.outBuffer.qsize())
+        print(out_len, end=" ")
+        if out_len == 0:
+            return 0
+
         temp = []
         for i in range(out_len):
             temp.append(self.flexRadio.RxAudioStreamer.outBuffer.get_nowait())
-        out = numpy.array(temp)
+        out[:out_len] = numpy.array(temp)
         
-        return len(output_items[0])
-
-
+        return out_len
 
     def setFreq(self, newFreq):
         self.flexRadio.GetSlice(0).Tune(newFreq)
