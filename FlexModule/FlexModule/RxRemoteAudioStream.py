@@ -1,4 +1,6 @@
+from numpy import array
 from queue import Queue
+from scipy.io.wavfile import write
 
 class RxRemoteAudioStream(object):
 	"""class for a RX Remote Audio Stream """
@@ -13,9 +15,9 @@ class RxRemoteAudioStream(object):
 		# self.RxGain = 50
 
 
-	def Close(self):
-		command = "stream remove 0x" + self.stream_id
-		self.radio.SendCommand(command)
+	# def Close(self):
+	# 	command = "stream remove 0x" + self.stream_id
+	# 	self.radio.SendCommand(command)
 
 
 	# def SetRxGain(self, rg):
@@ -25,8 +27,11 @@ class RxRemoteAudioStream(object):
 	# 		rg = 0
 	
 	def WriteToFile(self):
-		with open("sample.bin", "wb") as outfile:
-			for i in range(self.outBuffer.qsize()):
-				outfile.write(self.outBuffer.get())
-			# for i in self.outBuffer:
-			# 	outfile.write(i)
+		temp = []
+		samplerate = 44100
+		for i in range(self.outBuffer.qsize()):
+			temp.append(self.outBuffer.get())
+
+		wavArr = array(temp, dtype=float)
+
+		write("example.wav", samplerate, wavArr)

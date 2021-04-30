@@ -39,6 +39,8 @@ class FlexSource(gr.sync_block):
         self.serial = serial
 
         self.smartLink = SmartLink()    # relies on a Windows operating machine as it sends "Windows_NT" when registering with radio
+        if len(self.smartLink.raio_list) < 1:
+            return
         self.radioInfo = self.smartLink.GetRadioFromAvailable(self.serial)
         self.flexRadio = Radio(self.radioInfo, self.smartLink)
 
@@ -85,6 +87,7 @@ class FlexSource(gr.sync_block):
         out[:out_len] = numpy.array(temp)
         
         return out_len
+
 
     def setFreq(self, newFreq):
         self.flexRadio.GetSlice(0).Tune(newFreq)

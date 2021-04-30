@@ -19,38 +19,29 @@ def main():
 		receiveThread.start()
 
 		sleep(2)
-
-		# print("sending version command")
-		# flexRadio.FLEX_Sock.send("version\n".encode("cp1252"))
-
+		
 		flexRadio.UpdateAntList()
 		flexRadio.SendCommand('sub slice all')
 		flexRadio.GetSliceList()
 		flexRadio.SendCommand("sub pan all")
 		
-		flexRadio.CreateAudioStream(False)
-		while not flexRadio.RxAudioStreamer:
-			continue
+
+		flexRadio.GetSlice(0).Tune(14.070)
+		flexRadio.GetSlice(0).Set(mode='USB')
+		# pdb.set_trace()
+		# flexRadio.CreateAudioStream(False)
 		flexRadio.OpenUDPConnection()
+		# flexRadio.AddPanafall(10)
 
-		sleep(3)
-		print("Stream Buffer: ", flexRadio.RxAudioStreamer.outBuffer.qsize())
-		flexRadio.GetSlice(0).Tune(7.5)
-		sleep(3)
-		print("Stream Buffer: ", flexRadio.RxAudioStreamer.outBuffer.qsize())
-		flexRadio.GetSlice(0).Remove()
+		sleep(2)
+		flexRadio.Panafall.Set(xpixels=1000)
+		sleep(2)
 
-		start = time.process_time()
-		temp = []
-		while not flexRadio.RxAudioStreamer.outBuffer.empty():
-			temp.append(flexRadio.RxAudioStreamer.outBuffer.get_nowait())
-		gnu_buf = numpy.array(temp)
-		print(time.process_time() - start)
-
-
-		flexRadio.RxAudioStreamer.Close()
-
-
+		# sleep(30)
+		# flexRadio.RemoveAudioStream()
+		# flexRadio.RxAudioStreamer.WriteToFile()
+		flexRadio.RemovePanafall()
+		pdb.set_trace()
 
 		receiveThread.running = False
 		flexRadio.CloseRadio()

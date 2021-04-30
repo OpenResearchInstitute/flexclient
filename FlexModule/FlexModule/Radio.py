@@ -1,5 +1,6 @@
 import http.client, pdb, socket, ssl, threading, select
 from .Slice import Slice
+from .Panafall import Panafall
 
 
 class Radio(object):
@@ -10,7 +11,8 @@ class Radio(object):
 		self.StatusList = []
 		self.AntList = []
 		self.SliceList = [Slice(self, 0, "ANT1", "fm")]	# FLEX has a default slice on start up 
-		self.PanList = []
+		self.Panafall = Panafall(self, "0x40000000", "0x42000000", 0, 50, 20) # FLEX also has a default Panafall
+		# self.Panafall = None
 		self.RxAudioStreamer = None
 
 		self.smartlink_sock = smartlink.wrapped_server_sock	# socket to comms with Smartlink
@@ -56,8 +58,10 @@ class Radio(object):
 
 
 	def OpenUDPConnection(self):
-		command = "client udp_register handle=0x" + self.clientHandle
-		self.DATA_Sock.sendto(command.encode("cp1252"), (self.radioData["public_ip"], int(self.radioData["public_upnp_udp_port"])))
+		# tls_command = "client uddport " + self.radioData["public_upnp_udp_port"]
+		# self.SendCommand(tls_command)
+		udp_command = "client udp_register handle=0x" + self.clientHandle
+		self.DATA_Sock.sendto(udp_command.encode("cp1252"), (self.radioData["public_ip"], int(self.radioData["public_upnp_udp_port"])))
 
 
 	def SendCommand(self, string):
@@ -85,6 +89,7 @@ class Radio(object):
 			command = "stream remove 0x" + self.RxAudioStreamer.stream_id
 			self.SendCommand(command)
 		except AttributeError:
+			# log error
 			print("Radio does not have an audio stream to remove!")
 	"""				"""
 
@@ -94,11 +99,11 @@ class Radio(object):
 		newSlice = Slice(self, freq, ant, mode)
 
 		command = "slice create"
-		command += (" freq=" + newSlice.freq)
+		command += (" freq=" + newSlice.RF_frequency)
 		if streamID is not None:
 			newSlice.slice_id = streamID
 			command += (" pan=0x" + str(newSlice.slice_id))
-		command += (" ant=" + newSlice.ant)
+		command += (" ant=" + newSlice.rxant)
 		command += (" mode=" + newSlice.mode)
 		if source_slice is not None:
 			command += (" clone_slice=" + str(source_slice))
@@ -110,7 +115,7 @@ class Radio(object):
 
 	def GetSlice(self, s_id):
 		return [s for s in self.SliceList if s.slice_id == s_id][0]
-		# We want the slice with corresponding id (as this is what FLEX recognises)
+		# We want the slice with corresponding id (as this is what FLEX recognises) not list index
 
 	def RemoveSlice(self, slice_id):
 		self.GetSlice(slice_id).Remove()
@@ -118,12 +123,23 @@ class Radio(object):
 
 	def GetSliceList(self):
 		self.SendCommand("slice list")
-	""" 				"""
+	""" 			"""
 
 
 	""" Pan Methods """
+	def AddPanafall(self, freq, x_pixels = 1024, y_pixels = 700):
+		# need to add antenna variable?
+		command = "display panafall create freq=" + str(freq) + " x=" + str(x_pixels) + " y=" + str(y_pixels)
+		self.SendCommand(command)
 
-	""" 		"""
+	def RemovePanafall(self):
+		try:
+			command = "display panf r " + self.Panafall.panadapter_id
+			self.SendCommand(command)
+		except AttributeError:
+			# log error
+			print("Radio does not a have Panafall object to remove!")
+	""" 			"""
 
 
 	def UpdateAntList(self):
@@ -147,6 +163,7 @@ class Radio(object):
 sub pan all
 display panafall create x=1024 y=700
 display panafall set 0x40000000 center=1.00 autocenter=0 bandwidth=0.1
+
 sub daxiq all
 stream create daxiq=1
 dax iq set 1 pan=0x40000000 rate=24000

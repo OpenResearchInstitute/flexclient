@@ -40,10 +40,10 @@ class SmartLink(object):
 		self.pingThread.start()
 
 
-		# token_data = self.get_auth0_tokens( self.HOST_Auth, self.CLIENT_ID, self.REDIRECT_URI, self.SCOPE_LIST, self.BROWSER )?
-		token_data = {}
-		with open("token.txt", "r") as infile:
-			token_data['id_token'] = infile.readline()
+		token_data = self.get_auth0_tokens( self.HOST_Auth, self.CLIENT_ID, self.REDIRECT_URI, self.SCOPE_LIST, self.BROWSER )
+		# token_data = {}
+		# with open("token.txt", "r") as infile:
+		# 	token_data['id_token'] = infile.readline()
 
 		self.radio_list = self.SendRegisterApplicationMessageToServer("FlexModule", self.OS, token_data['id_token'])
 
