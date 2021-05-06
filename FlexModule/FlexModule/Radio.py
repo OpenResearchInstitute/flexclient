@@ -12,7 +12,6 @@ class Radio(object):
 		self.AntList = []
 		self.SliceList = [Slice(self, 0, "ANT1", "fm")]	# FLEX has a default slice on start up 
 		self.Panafall = Panafall(self, "0x40000000", "0x42000000", 0, 50, 20) # FLEX also has a default Panafall
-		# self.Panafall = None
 		self.RxAudioStreamer = None
 
 		self.smartlink_sock = smartlink.wrapped_server_sock	# socket to comms with Smartlink
@@ -23,6 +22,7 @@ class Radio(object):
 		self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 		self.FLEX_Sock = ssl.wrap_socket(self.sock)	# socket to comms with the FLEX radio
 		self.DATA_Sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+		self.UdpListening = False
 
 		self.clientHandle = ""
 		self.serverHandle = self.SendConnectMessageToRadio()
@@ -62,6 +62,12 @@ class Radio(object):
 		# self.SendCommand(tls_command)
 		udp_command = "client udp_register handle=0x" + self.clientHandle
 		self.DATA_Sock.sendto(udp_command.encode("cp1252"), (self.radioData["public_ip"], int(self.radioData["public_upnp_udp_port"])))
+		self.UdpListening = True
+		print("UDP connection opened")
+
+	def CloseUDPConnection(self):
+		self.UdpListening = False
+		print("UDP connection closed")
 
 
 	def SendCommand(self, string):

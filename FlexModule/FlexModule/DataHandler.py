@@ -26,9 +26,10 @@ class ReceiveData(threading.Thread):
 						ParseRead(self.radio, tcpResponse.rstrip())
 						tcpResponse = ""
 				elif s.type == 2: # "SOCK_DGRAM"
-					udpResponse, addr = s.recvfrom(8192)
-					# print(udpResponse)
-					ParseVitaPacket(self.radio, VitaPacket(udpResponse))
+					if self.radio.UdpListening:
+						udpResponse, addr = s.recvfrom(8192)
+						# print(udpResponse)
+						ParseVitaPacket(self.radio, VitaPacket(udpResponse))
 
 				# if not data:
 				# 	read_socks.remove(s)
@@ -127,12 +128,23 @@ def ParseReply(radio, string):
 			# log error
 			pass
 		else:
-			# For some reason, the radio expects a different term to one it returns for these two ¯\_(ツ)_/¯
-			# if key is "xpixels":
-			# 	setattr(radio.Panafall, "x_pixels", float(value))
-			# elif key is "ypixels":
-			# 	setattr(radio.Panafall, "y_pixels", float(value))
-			pass
+			pan_info = dict(param.split("=") for param in sent_msg.split(" ")[4:])
+			for key, value in pan_info.items():
+				# For some reason, the radio expects a different term to one it returns for these two ¯\_(ツ)_/¯
+				if key == "xpixels":
+					setattr(radio.Panafall, "x_pixels", float(value))
+				elif key == "ypixels":
+					setattr(radio.Panafall, "y_pixels", float(value))
+				else:
+					try:
+						val_type = type(getattr(radio.Panafall, key))
+					except AttributeError:
+						continue
+
+					if val_type is float or val_type is int:
+						setattr(radio.Panafall, key, float(value))
+					else:
+						setattr(radio.Panafall, key, value)
 	elif "display panf r" in sent_msg:
 		if hex_code != 0:
 			# log error
@@ -250,12 +262,14 @@ def ParseVersion(radio, string):
 
 def ParseVitaPacket(radio, packet):
 	Id = int.from_bytes(packet.class_id, byteorder='big') & int('FFFF',16)	# all but the last 2 bytes are the same
+	ValidatePacketCount(Id, packet.pkt_count)
+	# print(Id, packet.pkt_count)
 	if Id == int('FFFF',16):
 		# DISCOVERY Packet
 		pass
 	elif Id == int('8003',16):
 		# FFT Packet
-		print("FFT:", packet.pkt_size, len(packet.payload))
+		# print("FFT:", packet.pkt_size, len(packet.payload))
 		if radio.Panafall:
 			pan_data = ParsePanadapterPacket(packet, radio.Panafall.x_pixels, radio.Panafall.y_pixels)
 			radio.Panafall.PanBuffer.put_nowait(pan_data)
@@ -269,10 +283,18 @@ def ParseVitaPacket(radio, packet):
 			radio.RxAudioStreamer.outBuffer.put_nowait(opusData)
 	elif Id == int('3E3',16):
 		# IF NARROW Packet
-		rawData = ParseIfNarrowPacket(packet)
 		if radio.RxAudioStreamer:
-			for flt in iter_unpack("!f",rawData):	# take every 4 bytes and cast to IEEE float
-				radio.RxAudioStreamer.outBuffer.put_nowait(flt[0])	# iter_unpack returns tuple of 1 item
+			ParseIfNarrowPacket(packet, radio.RxAudioStreamer.outBuffer)
+		# rawData = ParseIfNarrowPacket(packet)
+		# if radio.RxAudioStreamer:
+		# 	switch = True
+		# 	for flt in iter_unpack("!f",rawData):	# take every 4 bytes and cast to IEEE float
+		# 		# FLEX sends 2 channels of same audio stream - I'm only saving 1 channel
+		# 		if switch:
+		# 			radio.RxAudioStreamer.outBuffer.put_nowait(flt[0])	# iter_unpack returns tuple of 1 item
+		# 		# else:
+		# 		# 	do something here if 2nd channel required
+		# 		switch ^= 1
 
 
 def ParseOpusPacket(packet):
@@ -280,58 +302,118 @@ def ParseOpusPacket(packet):
 	# return data[:len(data)-preamble.Header.Payload_cutoff_bytes]
 
 
-def ParseIfNarrowPacket(packet):
-	return packet.payload
+def ParseIfNarrowPacket(packet, buffer):
+	switch = True
+	# cast to list() to be able to index
+	for flt in iter_unpack("!f", packet.payload):	# take every 4 bytes and cast to float
+		# FLEX sends 2 channels of same audio stream - I'm only saving 1 channel
+		if switch:
+			buffer.put_nowait(flt[0])	# iter_unpack returns tuple of 1 item
+		# else:
+		# 	do something here if 2nd channel required
+		switch = not switch
 
 
 def ParseWaterfallPacket(packet):
-	#do something
+	"""
+To render the waterfall, you need to:
+Map the pixel offset in the display to a frequency using the pan adaptor settings as reference.  In the above example, pixel zero in the pan adaptor is 14.000 and pixel one is 14.0001953125 etc.
+Find the nearest "bin" at or below this frequency, interpolate the "bin" values of adjacent bins to determine the appropriate magnitude for this pixel frequency.
+Map the 16 bit unsigned integer value into an appropriate color space.
+Set the corresponding X pixel in the bitmap to this color.
+This needs to be done for each line in the bitmap which is rendered from the list of tiles received - with each update you draw the top line of the bitmap and scroll all the older lines down by one pixel vertically.
+
+	index := 0
+
+	wftile.FrameLowFreq = binary.BigEndian.Uint64(data[index:8]) >> 20	# NEED
+	index += 8
+
+	wftile.BinBandwidth = binary.BigEndian.Uint64(data[index:index+8]) >> 20	# NEED
+	index += 8
+
+	wftile.MysteryValue = binary.BigEndian.Uint16(data[index : index+2])
+	index += 2
+
+	wftile.LineDurationMS = binary.BigEndian.Uint16(data[index : index+2])
+	index += 2
+
+	wftile.Width = binary.BigEndian.Uint16(data[index : index+2])	# MAYBE
+	index += 2
+
+	wftile.Height = binary.BigEndian.Uint16(data[index : index+2])	# MAYBE
+	index += 2
+
+	wftile.Timecode = binary.BigEndian.Uint32(data[index : index+4])
+	index += 4
+
+	wftile.AutoBlackLevel = binary.BigEndian.Uint32(data[index : index+4])
+	index += 4
+
+	wftile.TotalBinsInFrame = binary.BigEndian.Uint16(data[index : index+2])	# MAYBE
+	index += 2
+
+	wftile.FirstBinIndex = binary.BigEndian.Uint16(data[index : index+2])	# MAYBE
+	index += 2
+
+	for i := 0; i < (len(data))-preamble.Header.Payload_cutoff_bytes-index-4; /* -4 should not be.... another mytery*/ i += 2 {
+		wftile.Data = append(wftile.Data, binary.BigEndian.Uint16(data[i+index:i+index+2]))
+	}
+	"""
 	pass
 
 def ParsePanadapterPacket(packet, x, y):
-	# for item in iter_unpack(">H", packet.payload):
 	pan_data = [] 
 	index = 0
 
-	StartBin_index = unpack(">H", packet.payload[index : index+2])[0]
-	index += 2
+	StartBin_index, NumBins, BinSize, TotalBinsInFrame, FrameIndex, Packet_Count = unpack(">HHHHLL", packet.payload[index:index+16])
+	# Packet_Count could be used to error check, but we already have an error check for all VITA packet types
+	index += 16
 
-	NumBins = unpack(">H", packet.payload[index : index+2])[0]
-	index += 2
-
-	BinSize = unpack(">H", packet.payload[index : index+2])[0]
-	index += 2
-
-	TotalBinsInFrame = unpack(">H", packet.payload[index : index+2])[0]
-	index += 2
-
-	FrameIndex = unpack(">L", packet.payload[index : index+4])[0]
-	index += 4
-
-	for i in range(0,int(NumBins)*2,2):
-		pan_data.append( unpack(">H", packet.payload(data[i+index:i+index+2]))[0] )
+	for i in iter_unpack(">H", packet.payload[index:index+TotalBinsInFrame*2]):
+		pan_data.append(y - i[0])	# invert y axis as FLEX graphs differently 
 
 	return pan_data
 
 
+def ValidatePacketCount(pkt_id, pkt_cnt):
+	Error = False
+	if pkt_cnt == 0:
+		prev_cnt = 15
+	else: prev_cnt = pkt_cnt - 1
 
+	if pkt_id == int('8003',16):
+		try:
+			if ValidatePacketCount.fftCount != prev_cnt:
+				Error = True
+		except AttributeError:
+			# not been intialised yet, will be below
+			pass
+		ValidatePacketCount.fftCount = pkt_cnt
+	elif pkt_id == int('8004',16):
+		try:
+			if ValidatePacketCount.wtrflCount != prev_cnt:
+				Error = True
+		except AttributeError:
+			pass
+		ValidatePacketCount.wtrflCount = pkt_cnt
+	elif pkt_id == int('8005',16):
+		try:
+			if ValidatePacketCount.opusCount != prev_cnt:
+				Error = True
+		except AttributeError:
+			pass
+		ValidatePacketCount.opusCount = pkt_cnt
+	elif pkt_id == int('3E3',16):
+		try:
+			if ValidatePacketCount.ifNCount != prev_cnt:
+				Error = True
+		except AttributeError:
+			pass
+		ValidatePacketCount.ifNCount = pkt_cnt
+	# Add more packet types when required 
 
-"""
-display pan set 0x40000000 x=100 y=20
-
-The radio will send an array of values between 0-20.  These values are Y.  The position of value (Bin) is X.  So lets take these values from a single packet and place them in an array.  
-You should end up with an Array that has a length of 100 and contains values between 0-20.  The lower the the value the higher the signal strength. 
-
-The index of the array is the X value, and the value at that index is Y.  Now you jut need to plot those values on the screen. You will plot from 0,0 which is the upper left corner of the window. 
-
-Now you just need to create a for loop to draw lines
-
-drawline from index,array[index] to index+1,array[index+1]
-increment index and repeat till index = array length-1 (99 in this example)
-
-Clear window
-read next packet and do it again.
-"""
+	if Error:
+		print("D", end="")
 
 
 

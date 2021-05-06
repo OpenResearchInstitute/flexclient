@@ -6,9 +6,9 @@ templates:
   imports: import gnu_flex
   make: gnu_flex.FlexSource(${serial})
   callbacks:
-  - setFreq(newFreq)
-  - setMode(newMode)
-  - setAntenna(newAnt)
+  - setFreq(${freq})
+  - setMode(${mode})
+  - setAntenna(${ant})
 
 #  Make one 'parameters' list entry for every parameter you want settable from the GUI.
 #     Keys include:

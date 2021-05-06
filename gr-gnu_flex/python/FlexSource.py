@@ -39,7 +39,7 @@ class FlexSource(gr.sync_block):
         self.serial = serial
 
         self.smartLink = SmartLink()    # relies on a Windows operating machine as it sends "Windows_NT" when registering with radio
-        if len(self.smartLink.raio_list) < 1:
+        if len(self.smartLink.radio_list) < 1:
             return
         self.radioInfo = self.smartLink.GetRadioFromAvailable(self.serial)
         self.flexRadio = Radio(self.radioInfo, self.smartLink)
@@ -77,7 +77,7 @@ class FlexSource(gr.sync_block):
 
         """ Queue() implementation"""
         out_len = min(len(output_items[0]), self.flexRadio.RxAudioStreamer.outBuffer.qsize())
-        print(out_len, end=" ")
+        # print(out_len, end=" ")
         if out_len == 0:
             return 0
 

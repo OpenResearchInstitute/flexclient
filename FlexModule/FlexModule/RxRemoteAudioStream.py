@@ -11,7 +11,6 @@ class RxRemoteAudioStream(object):
 		self.stream_id = stream_id
 		self.isCompressed = isCompressed
 		self.outBuffer = Queue()
-		# self.outBuffer = []
 		# self.RxGain = 50
 
 
@@ -28,10 +27,13 @@ class RxRemoteAudioStream(object):
 	
 	def WriteToFile(self):
 		temp = []
-		samplerate = 44100
+		samplerate = 24000
 		for i in range(self.outBuffer.qsize()):
 			temp.append(self.outBuffer.get())
 
 		wavArr = array(temp, dtype=float)
 
 		write("example.wav", samplerate, wavArr)
+		# with open(r"C:\Users\jonny\Documents\Uni\Project\gnu-radio-implementation-for-flex\sample.bin", "wb") as outfile:
+		# 	for i in range(self.outBuffer.qsize()):
+		# 		outfile.write(self.outBuffer.get())

@@ -13,7 +13,7 @@ class Panafall(object):
 		self.y_pixels = y
 
 		# useful parameters that are unknown on intialisation
-		self.rxant = ""
+		self.ant = ""
 		self.daxiq_channel = 0
 		self.band = 0
 		self.bandwidth = 0.0
