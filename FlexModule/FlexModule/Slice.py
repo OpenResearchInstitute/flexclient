@@ -8,7 +8,7 @@ class Slice(object):
 	def __init__(self, radio, freq, ant, mode):
 		self.slice_id = next(self.Id_iter)
 		self.radio = radio
-
+		self.rxant = ant
 		if freq < 0.03:
 			self.RF_frequency = 0.03
 			# log attempt to set below min
@@ -18,8 +18,6 @@ class Slice(object):
 		else:
 			self.RF_frequency = freq
 
-		self.rxant = ant
-		
 		self.mode = mode.upper()
 
 

@@ -102,20 +102,26 @@ class Radio(object):
 
 	""" Slice Methods """
 	def AddSlice(self, freq, ant, mode, streamID=None, source_slice=None):
-		newSlice = Slice(self, freq, ant, mode)
+		# newSlice = Slice(self, freq, ant, mode)
+		if freq < 0.03:
+			freq = 0.03
+			# log attempt to set below min
+		elif freq > 54.0:
+			freq = 54.0
+			# log attempt to set above max
 
 		command = "slice create"
-		command += (" freq=" + newSlice.RF_frequency)
-		if streamID is not None:
-			newSlice.slice_id = streamID
-			command += (" pan=0x" + str(newSlice.slice_id))
-		command += (" ant=" + newSlice.rxant)
-		command += (" mode=" + newSlice.mode)
+		command += (" freq=" + str(freq))
+		# if streamID is not None:
+		# 	newSlice.slice_id = streamID
+		# 	command += (" pan=0x" + str(newSlice.slice_id))
+		command += (" ant=" + ant)
+		command += (" mode=" + mode)
 		if source_slice is not None:
 			command += (" clone_slice=" + str(source_slice))
 		
-		self.SliceList.append(newSlice)
-		self.radio.SendCommand(command)
+		# self.SliceList.append(newSlice)
+		self.SendCommand(command)
 
 		# add reply expected to reply list = R21|0|0
 

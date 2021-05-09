@@ -36,7 +36,7 @@ def main():
 		
 		sleep(2)
 		# flexRadio.GetSlice(0).Tune(14.222)
-		print(flexRadio.GetSlice(0).RF_frequency)
+		# print(flexRadio.GetSlice(0).RF_frequency)
 		flexRadio.SendCommand("slice t 0 14.222 autopan=1")
 		flexRadio.GetSlice(0).Set(mode='USB')
 		# pdb.set_trace()
