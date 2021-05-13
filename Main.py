@@ -34,16 +34,21 @@ def main():
 		flexRadio.GetSliceList()
 		flexRadio.SendCommand("sub pan all")
 		
-		sleep(2)
+		# sleep(2)
 		# flexRadio.GetSlice(0).Tune(14.222)
 		# print(flexRadio.GetSlice(0).RF_frequency)
 		flexRadio.SendCommand("slice t 0 14.222 autopan=1")
-		flexRadio.GetSlice(0).Set(mode='USB')
+		flexRadio.GetSlice(0).Set(mode='USB', rxant="ANT2")
 		# pdb.set_trace()
 		# flexRadio.CreateAudioStream(False)
-		flexRadio.Panafall.Set(xpixels=1000, ypixels=700, ant="ANT2")
+		flexRadio.Panafall.Set(xpixels=1000)
+		flexRadio.Panafall.Set(ypixels=700)
+		flexRadio.Panafall.Set(rxant="ANT2")
+		flexRadio.Panafall.Set(rfgain=0.9)
+		sleep(1)
+		pdb.set_trace()
 		flexRadio.OpenUDPConnection()
-		sleep(10)
+		sleep(1)
 
 		""" Audio Stream Test """
 		# testTime = 10 #seconds

@@ -4,7 +4,11 @@ category: '[gnu_flex]'
 
 templates:
   imports: import gnu_flex
-  make: gnu_flex.FlexSource(${serial})
+  make: |-
+    gnu_flex.FlexSource(${serial})
+    self.${id}.setFreq(${freq})
+    self.${id}.setMode(${mode})
+    self.${id}.setAntenna(${ant})
   callbacks:
   - setFreq(${freq})
   - setMode(${mode})
@@ -22,12 +26,16 @@ parameters:
 - id: freq
   label: Slice Frequency
   dtype: float
+  default: 14.1
 - id: mode
   label: Slice Demod Mode
   dtype: string
+  default: "USB"
 - id: ant
   label: Slice Antenna
-  dtype: string
+  dtype: enum
+  options: ['"ANT1"', '"ANT2"', '"RX_A"', '"XVTA"']
+  option_labels: ["ANT1", "ANT2", "RX_A", "XVTA"]
 
 #  Make one 'inputs' list entry per input and one 'outputs' list entry per output.
 #  Keys include:

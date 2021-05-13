@@ -89,6 +89,15 @@ def ParseResponse(radio, string):
 			# remove self now that radio has confirmed deletion
 			s_id = int(sent_msg[-1])
 			radio.SliceList.remove(radio.GetSlice(s_id))
+	elif "slice t" in sent_msg:
+		if hex_code != 0:
+			# log error
+			pass
+		else:
+			tune_info = sent_msg.split(" ")
+			s_id = tune_info[2]
+			freq = float(tune_info[3])
+			radio.GetSlice(0).RF_frequency = freq
 	elif "slice list" in sent_msg:
 		if hex_code != 0:
 			# log error

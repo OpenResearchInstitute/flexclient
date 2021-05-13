@@ -38,7 +38,7 @@ class FlexSource(gr.sync_block):
             out_sig=[numpy.float32, ])
         self.serial = serial
 
-        self.smartLink = SmartLink()    # relies on a Windows operating machine as it sends "Windows_NT" when registering with radio
+        self.smartLink = SmartLink()
         if len(self.smartLink.radio_list) < 1:
             return
         self.radioInfo = self.smartLink.GetRadioFromAvailable(self.serial)
@@ -68,12 +68,6 @@ class FlexSource(gr.sync_block):
         out = output_items[0]
         # if self.flexRadio.RxAudioStreamer.isCompressed:
             # do Opus decompression
-        
-        """ list implementation """    
-        # temp = numpy.array(self.flexRadio.RxAudioStreamer.outBuffer)
-        # out[:] = temp
-        # del self.flexRadio.RxAudioStreamer.outBuffer[0:len(temp)]
-
 
         """ Queue() implementation"""
         out_len = min(len(output_items[0]), self.flexRadio.RxAudioStreamer.outBuffer.qsize())
@@ -95,6 +89,6 @@ class FlexSource(gr.sync_block):
     def setMode(self, newMode):
         self.flexRadio.GetSlice(0).Set(mode=newMode)
 
-    def setAnt(self, newAnt):
-        self.flexRadio.GetSlice(0).Set(ant=newAnt)
+    def setAntenna(self, newAnt):
+        self.flexRadio.GetSlice(0).Set(rxant=newAnt)
 
