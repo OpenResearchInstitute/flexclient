@@ -28,46 +28,30 @@ def main():
 		receiveThread.start()
 
 		# sleep(2)
-		print("Before subscriptions are enabled:")
-		print("Slice frequency: ", flexRadio.GetSlice(0).RF_frequency)
-		print("Slice demodulation mode: ", flexRadio.GetSlice(0).mode)
 		flexRadio.UpdateAntList()
 		flexRadio.SendCommand('sub slice all')
 		flexRadio.GetSliceList()
 		flexRadio.SendCommand("sub pan all")
 		
 		# sleep(2)
-		# flexRadio.GetSlice(0).Tune(14.222)
-		# flexRadio.SendCommand("slice t 0 14.222 autopan=1")
-		# flexRadio.GetSlice(0).Set(mode='USB', rxant="ANT2")
+		flexRadio.GetSlice(0).Tune(14.222)
+		flexRadio.SendCommand("slice t 0 14.222 autopan=1")
+		flexRadio.GetSlice(0).Set(mode='USB', rxant="ANT2")
 		# pdb.set_trace()
-		# flexRadio.CreateAudioStream(False)
-		# flexRadio.Panafall.Set(xpixels=1000)
-		# flexRadio.Panafall.Set(ypixels=700)
-		# flexRadio.Panafall.Set(rxant="ANT2")
-		# flexRadio.Panafall.Set(rfgain=0.9)
+		flexRadio.CreateAudioStream(False)
 		sleep(1)
-		print("After subscriptions are enabled:")
-		print("Slice frequency: ", flexRadio.GetSlice(0).RF_frequency)
-		print("Slice demodulation mode: ", flexRadio.GetSlice(0).mode)
-		# flexRadio.OpenUDPConnection()
-		# sleep(1)
-
+		flexRadio.OpenUDPConnection()
+		
 		# """ Audio Stream Test """
-		# testTime = 10 #seconds
-		# sampRate = 24000
-		# bytesPerSamp = 4
-		# sleep(10)
-		# flexRadio.CloseUDPConnection()
-		# noOfBytes = flexRadio.RxAudioStreamer.outBuffer.qsize() * bytesPerSamp
-		# expectedBytes = testTime * sampRate * bytesPerSamp
-		# print("\nReceived Bytes:", noOfBytes, "\tExpected Bytes",  expectedBytes)
-		# flexRadio.RxAudioStreamer.WriteToFile()
-
-		""" Pan Adapter Plot test """
-		# ani = FuncAnimation(plt.gcf(), animate, interval=42)
-		# plt.tight_layout()
-		# plt.show()
+		testTime = 10 #seconds
+		sampRate = 24000
+		bytesPerSamp = 4
+		sleep(10)
+		flexRadio.CloseUDPConnection()
+		noOfBytes = flexRadio.RxAudioStreamer.outBuffer.qsize() * bytesPerSamp
+		expectedBytes = testTime * sampRate * bytesPerSamp
+		print("\nReceived Bytes:", noOfBytes, "\tExpected Bytes",  expectedBytes)
+		flexRadio.RxAudioStreamer.WriteToFile()
 
 		# pdb.set_trace()
 

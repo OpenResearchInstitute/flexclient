@@ -282,12 +282,12 @@ def ParseVitaPacket(radio, packet):
 		# FFT Packet
 		# print("FFT:", packet.pkt_size, len(packet.payload))
 		if radio.Panafall:
-			pan_data = ParsePanadapterPacket(packet, radio.Panafall.x_pixels, radio.Panafall.y_pixels)
+			pan_data = ParsePanadapterPacket(packet, radio.Panafall.x_pixels, radio.Panafall.y_pixels, radio.Panafall.min_dbm, radio.Panafall.max_dbm)
 			radio.Panafall.PanBuffer.put_nowait(pan_data)
 	elif Id == int('8004',16):
 		# WATERFALL Packet:
 		if radio.Panafall:
-			ParseWaterfallPacket(packet)
+			# ParseWaterfallPacket(packet)
 	elif Id == int('8005',16):
 		# OPUS AUDIO Packet
 		if radio.RxAudioStreamer:
@@ -324,7 +324,19 @@ Find the nearest "bin" at or below this frequency, interpolate the "bin" values 
 Map the 16 bit unsigned integer value into an appropriate color space.
 Set the corresponding X pixel in the bitmap to this color.
 This needs to be done for each line in the bitmap which is rendered from the list of tiles received - with each update you draw the top line of the bitmap and scroll all the older lines down by one pixel vertically.
+	"""
+	waterfall_data = []
+	index = 0
 
+	FrameLowFreq, BinBandWidth, Unknown, LineDurationMS, Width, Height, TimeCode, AutoBlackLevel, TotalBinsInFrame, FirstBinIndex = unpack(">QQHHHHLLHH", packet.payload[index:index+36])
+	index += 36
+
+	for i in iter_unpack(">H", packet.payload[index:]):
+		waterfall_data.append(i[0])
+
+
+	# pdb.set_trace()
+	"""
 	index := 0
 
 	wftile.FrameLowFreq = binary.BigEndian.Uint64(data[index:8]) >> 20	# NEED
@@ -361,9 +373,9 @@ This needs to be done for each line in the bitmap which is rendered from the lis
 		wftile.Data = append(wftile.Data, binary.BigEndian.Uint16(data[i+index:i+index+2]))
 	}
 	"""
-	pass
+	return waterfall_data
 
-def ParsePanadapterPacket(packet, x, y):
+def ParsePanadapterPacket(packet, x, y, mindb, maxdb):
 	pan_data = [] 
 	index = 0
 
@@ -372,7 +384,8 @@ def ParsePanadapterPacket(packet, x, y):
 	index += 16
 
 	for i in iter_unpack(">H", packet.payload[index:index+TotalBinsInFrame*2]):
-		pan_data.append(y - i[0])	# invert y axis as FLEX graphs differently 
+		amplitude = Scaler((y-i[0]), 0, y, mindb, maxdb)	# invert y axis as FLEX graphs differently 
+		pan_data.append(amplitude)
 
 	return pan_data
 
@@ -418,4 +431,6 @@ def ValidatePacketCount(pkt_id, pkt_cnt):
 		print("D", end="")
 
 
-
+def Scaler(xold, rmin, rmax, tmin, tmax):
+	return ((xold - rmin)/(rmax - rmin)) * (tmax - tmin) + tmin
+	
