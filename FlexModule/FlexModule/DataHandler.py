@@ -287,7 +287,8 @@ def ParseVitaPacket(radio, packet):
 	elif Id == int('8004',16):
 		# WATERFALL Packet:
 		if radio.Panafall:
-			# ParseWaterfallPacket(packet)
+			wat_data = ParseWaterfallPacket(packet)
+			radio.Panafall.WatBuffer.enqueue(wat_data)
 	elif Id == int('8005',16):
 		# OPUS AUDIO Packet
 		if radio.RxAudioStreamer:

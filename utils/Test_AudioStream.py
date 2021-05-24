@@ -12,12 +12,6 @@ smartlink = SmartLink()
 radioInfo = smartlink.GetRadioFromAvailable(SERIAL)
 flexRadio = Radio(radioInfo, smartlink)
 
-def animate(i):
-	plt.cla()
-	plt.xlim([0,flexRadio.Panafall.x_pixels])
-	plt.ylim([0,flexRadio.Panafall.y_pixels])
-	plt.plot(flexRadio.Panafall.PanBuffer.get_nowait())
-
 
 def main():
 	""" smartlink connection should stay open if user wants to interact with multiple radios """

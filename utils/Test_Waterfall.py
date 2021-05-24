@@ -14,9 +14,11 @@ flexRadio = Radio(radioInfo, smartlink)
 
 def animate(i):
 	plt.cla()
-	plt.xlim([0,flexRadio.Panafall.x_pixels])
-	plt.ylim([0,flexRadio.Panafall.y_pixels])
-	plt.plot(flexRadio.Panafall.PanBuffer.get_nowait())
+	data = flexRadio.Panafall.WatBuffer.Buffer.copy()
+	plt.title("Waterfall Plot")
+	plt.xlabel("Frequency (MHz)")	# FrameLowFreq
+	plt.ylabel("Time (dB)")	# str(LineDurationS) + "ms multiples"
+	plt.imshow(data, aspect='auto', vmin=7418, vmax=30000)
 
 
 def main():
@@ -46,11 +48,11 @@ def main():
 		
 
 		""" Pan Adapter Plot test """
-		# ani = FuncAnimation(plt.gcf(), animate, interval=42)
-		# plt.tight_layout()
-		# plt.show()
+		ani = FuncAnimation(plt.gcf(), animate, interval=42)
+		plt.tight_layout()
+		plt.show()
 
-		pdb.set_trace()
+		# pdb.set_trace()
 
 		receiveThread.running = False
 		flexRadio.CloseRadio()

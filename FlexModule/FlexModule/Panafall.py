@@ -23,7 +23,7 @@ class Panafall(object):
 		self.rfgain = 0
 
 		self.PanBuffer = Queue()
-		self.WatBuffer = Queue()
+		self.WatBuffer = self.WaterfallBuffer()
 
 
 	def Set(self, **kwargs):
@@ -33,6 +33,15 @@ class Panafall(object):
 
 		self.radio.SendCommand(command)
 
+
+	class WaterfallBuffer:
+		def __init__(self):
+			self.Buffer = []
+
+		def enqueue(self, item):
+			while len(self.Buffer) > 100:
+				self.Buffer.pop()
+			self.Buffer.insert(0, item)
 
 
 
