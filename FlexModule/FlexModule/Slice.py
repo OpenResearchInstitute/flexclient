@@ -8,18 +8,16 @@ class Slice(object):
 	def __init__(self, radio, freq, ant, mode):
 		self.slice_id = next(self.Id_iter)
 		self.radio = radio
-
+		self.rxant = ant
 		if freq < 0.03:
-			self.freq = 0.03
+			self.RF_frequency = 0.03
 			# log attempt to set below min
-		elif freq > 54:
-			self.freq = 54
+		elif freq > 54.0:
+			self.RF_frequency = 54.0
 			# log attempt to set above max
 		else:
-			self.freq = freq
+			self.RF_frequency = freq
 
-		self.ant = ant
-		
 		self.mode = mode.upper()
 
 
@@ -30,15 +28,15 @@ class Slice(object):
 
 	def Tune(self, freq):
 		if freq < 0.03:
-			self.freq = 0.03
+			self.RF_frequency = 0.03
 			# log attempt to set below min
-		elif freq > 54:
-			self.freq = 54
+		elif freq > 54.0:
+			self.RF_frequency = 54.0
 			# log attempt to set above max
 		else:
-			self.freq = freq
+			self.RF_frequency = freq
 
-		command = "slice t " + str(self.slice_id) + " " + str(self.freq)
+		command = "slice t " + str(self.slice_id) + " " + str(self.RF_frequency)
 		self.radio.SendCommand(command)
 
 

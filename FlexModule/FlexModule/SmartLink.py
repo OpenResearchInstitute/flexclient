@@ -28,6 +28,7 @@ class SmartLink(object):
 	CLIENT_ID = "4Y9fEIIsVYyQo5u6jr7yBWc4lV5ugC2m"      # was "C1br1uk8UecHZnUGlIFt1yp62ZNizey3"
 	SCOPE_LIST = [ 'openid', 'profile' ]
 	BROWSER = 'chrome'
+	OS = "Windows_NT"
 
 	def __init__(self):
 		context = ssl.create_default_context()
@@ -40,7 +41,11 @@ class SmartLink(object):
 
 
 		token_data = self.get_auth0_tokens( self.HOST_Auth, self.CLIENT_ID, self.REDIRECT_URI, self.SCOPE_LIST, self.BROWSER )
-		self.radio_list = self.SendRegisterApplicationMessageToServer("FlexModule", "Windows_NT", token_data['id_token'])
+		# token_data = {}
+		# with open("token.txt", "r") as infile:
+		# 	token_data['id_token'] = infile.readline()
+
+		self.radio_list = self.SendRegisterApplicationMessageToServer("FlexModule", self.OS, token_data['id_token'])
 
 
 
@@ -48,12 +53,14 @@ class SmartLink(object):
 	#  The browser is set to Firefox() currently, but can be any which the Selenium module supports (e.g. Chrome()).
 	#  The output is None for an unsuccessful login, or the response dictionary for a successful one.
 	#  The token required by smartlink.flexradio.com is stored under the key "id_token".
-	def get_auth0_tokens(self, host, client_id, redirect_uri, scope_list, browser = 'chrome' ):
+	def get_auth0_tokens(self, host, client_id, redirect_uri, scope_list, browser):
+		""" Author - David Humphreys """
+		
 		""" to hide non-harmful error """
 		options = webdriver.ChromeOptions()
 		options.add_experimental_option('excludeSwitches', ['enable-logging'])
 		""" """
-		browsers = { 'firefox' : webdriver.Firefox, 'chrome' : webdriver.Chrome(options=options, executable_path=r"C:\Program Files\chromedriver_win32\chromedriver.exe") }
+		browsers = { 'chrome' : webdriver.Chrome(options=options, executable_path=r"C:\Program Files\chromedriver_win32\chromedriver.exe")} #,'firefox' : webdriver.Firefox(executable_path=GeckoDriverManager().install()) }
 		scope = "%20".join( scope_list )
 		state_len = 16
 		state = "".join( choices( ascii_letters + digits, k = state_len ) )       # was "ypfolheqwpezrxdb" when testing
@@ -129,6 +136,7 @@ class SmartLink(object):
 		radioData = []
 		if self.wrapped_server_sock.version() != None:
 			# print(self.wrapped_server_sock.version())
+			print(command)
 			self.wrapped_server_sock.send(command.encode("cp1252"))
 			""" Communicate with SmartLink Server """
 			inputs = [self.wrapped_server_sock]
@@ -147,14 +155,6 @@ class SmartLink(object):
 				if len(readable) < 1:
 					""" no sockets are readable so must escape loop """
 					inputs.clear()
-
-			"""
-			b'radio list radio_name= callsign= serial=1019-9534-6400-6018 model=FLEX-6400 status=Available version=3.1.12.51 inUseIp= inUseHost= last_seen=3/19/2021_12:58:38_PM public_ip=86.6.166.96 public_tls_port=-1 public_udp_port=-1 upnp_supported=1 public_upnp_tls_port=21000 public_upnp_udp_port=22000 max_licensed_version=v3 requires_additional_license=0 radio_license_id=00-1C-2D-05-0E-50 gui_client_programs= gui_client_stations= gui_client_handles= gui_client_ips= gui_client_hosts=|\r\n'
-			b'application user_settings callsign=GC0CDF first_name=Cardiff last_name=University\r\n'
-			b'application info public_ip=213.1.21.87\r\n'
-			THIS IS WHERE A RADIO INSTANCE IS USUALLY CREATED
-
-			"""
 
 		else: 
 			print("Socket connection not established....")
@@ -184,7 +184,12 @@ class SmartLink(object):
 	def CloseLink(self):
 		self.pingThread.running = False
 		self.pingThread.join() # End thread manually
+		# del self
 		self.wrapped_server_sock.close()
 		self.server_sock.close()
 
+
+	# def __del__(self):
+	# 	self.wrapped_server_sock.close()
+	# 	self.server_sock.close()
 
