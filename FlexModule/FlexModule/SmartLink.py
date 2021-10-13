@@ -60,7 +60,7 @@ class SmartLink(object):
 		options = webdriver.ChromeOptions()
 		options.add_experimental_option('excludeSwitches', ['enable-logging'])
 		""" """
-		browsers = { 'chrome' : webdriver.Chrome(options=options, executable_path=r"C:\Program Files\chromedriver_win32\chromedriver.exe")} #,'firefox' : webdriver.Firefox(executable_path=GeckoDriverManager().install()) }
+		browsers = { 'chrome' : webdriver.Chrome(options=options)} #,'firefox' : webdriver.Firefox(executable_path=GeckoDriverManager().install()) }
 		scope = "%20".join( scope_list )
 		state_len = 16
 		state = "".join( choices( ascii_letters + digits, k = state_len ) )       # was "ypfolheqwpezrxdb" when testing
@@ -164,7 +164,7 @@ class SmartLink(object):
 
 	def ParseRadios(self, radioString):
 		""" retrieve necessary radio info """
-		desirable_txt = {"serial": None, "public_ip": None, "public_upnp_tls_port": None, "public_upnp_udp_port": None}
+		desirable_txt = {"serial": None, "public_ip": None, "public_upnp_tls_port": None, "public_upnp_udp_port": None, "upnp_supported": None, "public_tls_port": None, "public_udp_port": None}
 		for ra in radioString.split(' '):
 			for txt in desirable_txt.keys():
 				if txt in ra:

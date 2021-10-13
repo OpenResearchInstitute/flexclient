@@ -27,15 +27,23 @@ class Radio(object):
 		self.clientHandle = ""
 		self.serverHandle = self.SendConnectMessageToRadio()
 		if self.serverHandle:
-			self.FLEX_Sock.connect((self.radioData['public_ip'], int(self.radioData['public_upnp_tls_port'])))
+			if (self.radioData['upnp_supported'] == '0'):
+				hp_port = self.radioData['public_tls_port']
+			else:
+				hp_port = self.radioData['public_upnp_tls_port']
+			self.FLEX_Sock.connect((self.radioData['public_ip'], int(hp_port)))
 			# print(self.FLEX_Sock.getpeername())
 			self.WanValidate()
 			self.SendCommand("client gui")
 
 
 	def SendConnectMessageToRadio(self):
+		if (self.radioData['upnp_supported'] == '0'):
+			hp_port = self.radioData['public_tls_port']
+		else:
+			hp_port = self.radioData['public_upnp_tls_port']
 		try:
-			command = "application connect serial=" + self.radioData['serial'] + " hole_punch_port=" + str(self.radioData['public_upnp_tls_port']) + "\n"
+			command = "application connect serial=" + self.radioData['serial'] + " hole_punch_port=" + str(hp_port) + "\n"
 		except TypeError:
 			print("Radio Serial not returned - is radio On?")
 			return
@@ -60,8 +68,12 @@ class Radio(object):
 	def OpenUDPConnection(self):
 		# tls_command = "client uddport " + self.radioData["public_upnp_udp_port"]
 		# self.SendCommand(tls_command)
+		if (self.radioData['upnp_supported'] == '0'):
+			udp_port = self.radioData['public_udp_port']
+		else:
+			udp_port = self.radioData['public_upnp_udp_port']
 		udp_command = "client udp_register handle=0x" + self.clientHandle
-		self.DATA_Sock.sendto(udp_command.encode("cp1252"), (self.radioData["public_ip"], int(self.radioData["public_upnp_udp_port"])))
+		self.DATA_Sock.sendto(udp_command.encode("cp1252"), (self.radioData["public_ip"], int(udp_port)))
 		self.UdpListening = True
 		print("UDP connection opened")
 
