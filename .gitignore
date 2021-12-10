@@ -1,5 +1,7 @@
 __pycache__
+*~
 token.txt
-example.wav
-example1.wav
-sample.bin
+build
+dist
+src/FlexModule.egg-info
+

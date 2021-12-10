@@ -177,8 +177,7 @@ class SmartLink(object):
 		for radio in self.radio_list:
 			if radio["serial"] == serial_no:
 				return radio
-		# Radio not in list
-		# Return "not found"
+                raise ValueError('Requested serial number not in authorized list')
 
 
 	def CloseLink(self):

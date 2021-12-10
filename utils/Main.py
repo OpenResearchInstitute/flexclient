@@ -1,15 +1,26 @@
+#!/bin/env python
 import http.client, pdb, socket, ssl, threading, select
 from time import sleep          # Needed to prevent busy-waiting for the browser to complete the login process!
 from FlexModule.SmartLink import SmartLink
 from FlexModule.Radio import Radio
 import FlexModule.DataHandler
 import numpy, time
+from sys import exit
+import os
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 
-SERIAL = '1019-9534-6400-6018'  # should be set through user input at startup
+SERIAL = os.getenv('FLEX_SERIAL_NUMBER') or None
+if SERIAL is None:
+        print('Environment variable FLEX_SERIAL_NUMBER not found')
+        exit()
 smartlink = SmartLink()
 radioInfo = smartlink.GetRadioFromAvailable(SERIAL)
+if radioInfo is None:
+        print("Failed to retrieve Radio Info, exiting")
+        exit()
+print("main")
+print(radioInfo)
 flexRadio = Radio(radioInfo, smartlink)
 
 def animate(i):
