@@ -11,3 +11,6 @@ Building a new API enables cross-platform uses of the SDR, opening many more opp
 
 The initial purpose of this module was to support gnuradio blocks which use the radio, but it can also be used to develop clients in pure python.
 
+Contributing:
+
+We use the black code formatter, and ask that all submissions be formatted with black before making a pull request.
