@@ -62,7 +62,7 @@ class SmartLink(object):
         # 	token_data['id_token'] = infile.readline()
 
         self.radio_list = self.SendRegisterApplicationMessageToServer(
-            "FlexModule", self.OS, token_data["id_token"]
+            "flexclient", self.OS, token_data["id_token"]
         )
 
     # Takes a hostname as input, and attempts auth0 authentication using a web browser.

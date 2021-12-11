@@ -2,9 +2,9 @@ import http.client, pdb, socket, ssl, threading, select
 from time import (
     sleep,
 )  # Needed to prevent busy-waiting for the browser to complete the login process!
-from FlexModule.SmartLink import SmartLink
-from FlexModule.Radio import Radio
-import FlexModule.DataHandler
+from flexclient.SmartLink import SmartLink
+from flexclient.Radio import Radio
+import flexclient.DataHandler
 import numpy, time
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
@@ -20,7 +20,7 @@ def main():
     # SERIAL = input("\nEnter your radio's Serial Number: ")
 
     if flexRadio.serverHandle:
-        receiveThread = FlexModule.DataHandler.ReceiveData(flexRadio)
+        receiveThread = flexclient.DataHandler.ReceiveData(flexRadio)
         receiveThread.start()
 
         # sleep(2)

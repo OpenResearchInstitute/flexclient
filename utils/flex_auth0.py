@@ -275,7 +275,7 @@ def ConfigureAndDiscover():
     )
     wrapped_server_sock.connect((HOST_FLEX, 443))
     ChosenRadio, Handle = SendRegisterApplicationMessageToServer(
-        wrapped_server_sock, "FlexModule", "Windows_NT", token_data["id_token"]
+        wrapped_server_sock, "flexclient", "Windows_NT", token_data["id_token"]
     )
     server_sock.close()
 

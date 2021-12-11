@@ -4,17 +4,17 @@ with open("README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
 
 setuptools.setup(
-    name="FlexModule",
-    version="0.4",
+    name="flexclient",
+    version="0.1",
     author="Open Research Institute",
     author_email="steve@conklinhouse.com",
     description="Python client API for the FLEX 6000/6400 radio",
     license="GPL",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/phase4ground/flexmodule",
+    url="https://github.com/phase4ground/flexclient",
     project_urls={
-        "Bug Tracker": "https://github.com/phase4ground/flexmodule/issues",
+        "Bug Tracker": "https://github.com/phase4ground/flexclient/issues",
     },
     classifiers=[
         "Development Status :: 3 - Alpha",
