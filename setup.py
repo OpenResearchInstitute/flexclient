@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setuptools.setup(
     name="FlexModule",
-    version="0.3",
+    version="0.4",
     author="Open Research Institute",
     author_email="steve@conklinhouse.com",
     description="Python client API for the FLEX 6000/6400 radio",
