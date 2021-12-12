@@ -3,5 +3,5 @@ __pycache__
 token.txt
 build
 dist
-src/FlexModule.egg-info
+src/flexclient.egg-info
 
