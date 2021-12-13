@@ -7,7 +7,8 @@ class Radio(object):
     cmdCnt = 0
     """ Class to create connection with FLEX radio and establish communication channel """
 
-    def __init__(self, radioData, smartlink):
+    def __init__(self, radioData, smartlink=None):
+        # smartlink is None for local LAN use
         self.ResponseList = {}
         self.StatusList = []
         self.AntList = []
@@ -18,31 +19,41 @@ class Radio(object):
             self, "0x40000000", "0x42000000", 0, 50, 20
         )  # FLEX also has a default Panafall
         self.RxAudioStreamer = None
-
-        self.smartlink_sock = (
-            smartlink.wrapped_server_sock
-        )  # socket to comms with Smartlink
+        if smartlink is not None:
+            self.LAN = False
+            self.smartlink_sock = (smartlink.wrapped_server_sock)  # socket to comms with Smartlink
+        else:
+            self.LAN = True
         self.radioData = radioData  # info for the radio about itself
         context = ssl.create_default_context()
         context.check_hostname = False
         context.verify_mode = ssl.CERT_NONE
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.FLEX_Sock = ssl.wrap_socket(
-            self.sock
-        )  # socket to comms with the FLEX radio
+        if smartlink is None:
+            self.FLEX_Sock = self.sock
+        else:
+            self.FLEX_Sock = ssl.wrap_socket(self.sock)  # socket to comms with the FLEX radio
         self.DATA_Sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.UdpListening = False
 
         self.clientHandle = ""
-        self.serverHandle = self.SendConnectMessageToRadio()
-        if self.serverHandle:
-            if self.radioData["upnp_supported"] == "0":
+        if not self.LAN:
+            self.serverHandle = self.SendConnectMessageToRadio()
+        if self.LAN or self.serverHandle:
+            if self.LAN:
+                hp_port = self.radioData["port"]
+            elif self.radioData["upnp_supported"] == "0":
                 hp_port = self.radioData["public_tls_port"]
             else:
                 hp_port = self.radioData["public_upnp_tls_port"]
-            self.FLEX_Sock.connect((self.radioData["public_ip"], int(hp_port)))
-            # print(self.FLEX_Sock.getpeername())
-            self.WanValidate()
+            print("ip = ", self.radioData["ip"])
+            print("port = ", int(hp_port))
+            if self.LAN:
+                self.FLEX_Sock.connect((self.radioData["ip"], int(hp_port)))
+            else:
+                self.FLEX_Sock.connect((self.radioData["public_ip"], int(hp_port)))
+                self.WanValidate()
+                # print(self.FLEX_Sock.getpeername())
             self.SendCommand("client gui")
 
     def SendConnectMessageToRadio(self):
@@ -193,7 +204,8 @@ class Radio(object):
 
     def CloseRadio(self):
         # del self
-        self.SendCommand("client disconnect " + self.serverHandle)
+        if not self.LAN:
+            self.SendCommand("client disconnect " + self.serverHandle)
         self.FLEX_Sock.close()
         self.sock.close()
 

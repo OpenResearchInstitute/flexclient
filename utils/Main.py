@@ -16,11 +16,15 @@ SERIAL = os.getenv("FLEX_SERIAL_NUMBER", default=None)
 if SERIAL is None:
     print("Environment variable FLEX_SERIAL_NUMBER not found")
     exit()
+
+# If we must authenticate using smartlink, then we can get a list
+# of accessible radios
 smartlink = SmartLink()
 radioInfo = smartlink.GetRadioFromAvailable(SERIAL)
 if radioInfo is None:
     print("Failed to retrieve Radio Info, exiting")
     exit()
+
 print("main")
 print(radioInfo)
 flexRadio = Radio(radioInfo, smartlink)

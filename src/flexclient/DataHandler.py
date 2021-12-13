@@ -47,7 +47,8 @@ def ParseRead(radio, string):
         print(string)
         ParseResponse(radio, string)
     elif read_type == "S":
-        ParseStatus(radio, string)
+        for line in string.splitlines():
+            ParseStatus(radio, line)
     elif read_type == "M":
         ParseMessage(radio, string)
     elif read_type == "H":
@@ -182,6 +183,7 @@ def ParseStatus(radio, string):
     try:
         (radio_handle, rec_msg) = string.split("|")
     except ValueError:
+        print("status: ", string)
         print("Error - Invalid status message")
         return
 

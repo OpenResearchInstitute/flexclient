@@ -10,7 +10,7 @@ from json import (
 )  # Only needed if using .loads() instead of manually parsing the final server response
 from random import choices  # Used when generating the STATE field
 from string import ascii_letters, digits  # Used when generating the STATE field
-
+from .Common import ParseRadio
 
 class PingServer(threading.Thread):
     """Thread to ping smartlink server whilst user info is inputted"""
@@ -192,7 +192,7 @@ class SmartLink(object):
                     data = s.recv(1024).decode("utf-8")
                     print(data)
                     if "radio_name" in data:
-                        radioData.append(self.ParseRadios(data))
+                        radioData.append(ParseRadio(data))
                     # else:
                     # 	""" Never gets here as no longer any sockets in readable """
                     # 	inputs.remove(s)
@@ -204,24 +204,6 @@ class SmartLink(object):
             print("Socket connection not established....")
 
         return radioData
-
-    def ParseRadios(self, radioString):
-        """retrieve necessary radio info"""
-        desirable_txt = {
-            "serial": None,
-            "public_ip": None,
-            "public_upnp_tls_port": None,
-            "public_upnp_udp_port": None,
-            "upnp_supported": None,
-            "public_tls_port": None,
-            "public_udp_port": None,
-        }
-        for ra in radioString.split(" "):
-            for txt in desirable_txt.keys():
-                if txt in ra:
-                    desirable_txt[txt] = ra.split("=")[1]
-
-        return desirable_txt
 
     def GetRadioFromAvailable(self, serial_no):
         for radio in self.radio_list:
