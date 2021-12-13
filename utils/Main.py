@@ -12,7 +12,7 @@ import os
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 
-SERIAL = os.getenv("FLEX_SERIAL_NUMBER") or None
+SERIAL = os.getenv("FLEX_SERIAL_NUMBER", default=None)
 if SERIAL is None:
     print("Environment variable FLEX_SERIAL_NUMBER not found")
     exit()
@@ -35,7 +35,6 @@ def animate(i):
 
 def main():
     """smartlink connection should stay open if user wants to interact with multiple radios"""
-    # SERIAL = input("\nEnter your radio's Serial Number: ")
 
     if flexRadio.serverHandle:
         receiveThread = flexclient.DataHandler.ReceiveData(flexRadio)
