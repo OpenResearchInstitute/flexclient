@@ -1,6 +1,6 @@
 # Python client module for FlexRadio 6K series radios
 
-NOTE: This is a very early alpha release which is very fussy to use. It is not recommended for general use.
+NOTE: This is a pre-alpha release which is very fussy to use. It is not recommended for general use.
 
 The FLEX-6000 series radios are software defined "radio Servers" with components and calibrations usually defined in hardware instead implemented with software.
 

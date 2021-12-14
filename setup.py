@@ -8,7 +8,7 @@ setuptools.setup(
     version="0.1",
     author="Open Research Institute",
     author_email="steve@conklinhouse.com",
-    description="Python client API for the FLEX 6000/6400 radio",
+    description="Python client API for the FLEX 6000 series radios",
     license="GPL",
     long_description=long_description,
     long_description_content_type="text/markdown",
@@ -17,7 +17,7 @@ setuptools.setup(
         "Bug Tracker": "https://github.com/phase4ground/flexclient/issues",
     },
     classifiers=[
-        "Development Status :: 3 - Alpha",
+        "Development Status :: 2 - Pre-Alpha",
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
         "Operating System :: OS Independent",

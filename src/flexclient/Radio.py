@@ -50,17 +50,15 @@ class Radio(object):
             hp_port = self.radioData["public_tls_port"]
         else:
             hp_port = self.radioData["public_upnp_tls_port"]
-        try:
-            command = (
-                "application connect serial="
-                + self.radioData["serial"]
-                + " hole_punch_port="
-                + str(hp_port)
-                + "\n"
-            )
-        except TypeError:
-            print("Radio Serial not returned - is radio On?")
-            return
+        if self.radioData["serial"] is None:
+            return ""
+        command = (
+            "application connect serial="
+            + self.radioData["serial"]
+            + " hole_punch_port="
+            + str(hp_port)
+            + "\n"
+        )
         print("\nSending connect message: " + command)
         self.smartlink_sock.send(command.encode("cp1252"))
         handle_data = self.smartlink_sock.recv(128).decode("cp1252")
